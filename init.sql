@@ -1,0 +1,19 @@
+CREATE TABLE hash
+(
+    hash VARCHAR(16) NOT NULL PRIMARY KEY,
+    cid VARCHAR(16) NOT NULL,
+    time SMALLINT NOT NULL 
+);
+
+CREATE TABLE cid
+(
+    cid VARCHAR(16) NOT NULL PRIMARY KEY,
+    name VARCHAR(64) NOT NULL,
+    season_id VARCHAR(16)
+);
+
+/* CREATE TABLE request
+(
+    qid INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    img_path VARCHAR(64) NOT NULL
+); */
