@@ -3,6 +3,8 @@ import sqlite3
 class FrameBox:
     def __init__(self):
         self.DB_PATH = os.path.join("sql", "frames.db")
+        self.INIT_SQL_PATH = os.path.join("sql", "init.sql")
+        self.hash_buffer = []
 
     def connect(self):
         self.sql_conn = sqlite3.connect(self.DB_PATH)
@@ -12,7 +14,23 @@ class FrameBox:
         self.sql_cursor.close()
         self.sql_conn.close()
 
-    def search_hash(self, half_results, with_info = True):
+    def add_hash(self, hash_str, brief):
+        name = brief['name']
+        cid = brief['cid']
+        time = brief['time']
+        self.sql_cursor.execute(
+            'INSERT INTO hash (hash, cid, time) VALUES (%d, %s, %d)'
+            %(int(hash_str, 16), cid, time)
+            )
+        self.sql_cursor.execute(
+            'INSERT INTO cid (cid, name) VALUES (%s, %s)'%(cid, name)
+            )
+
+        self.hash_buffer.append(hash_str)
+
+    
+
+    def search_hash(self, half_results):
         self.connect()
         keys = self.sql_cursor.execute('SELECT TOP(0) * FROM hash').fetchall()[0]
         results = []
@@ -37,3 +55,10 @@ class FrameBox:
                 i[keys[j]] = self.sql_cursor.fetchall()[0][j]
             self.close()
         return half_results
+
+    def init_db(self):
+        sql_cmd_f = open(self.INIT_SQL_PATH)
+        self.connect()
+        self.sql_cursor.execute(sql_cmd_f.read())
+        self.close()
+        sql_cmd_f.close()

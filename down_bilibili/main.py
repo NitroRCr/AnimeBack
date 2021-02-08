@@ -11,8 +11,12 @@ from PIL import Image
 import imagehash
 from bilibili_api import bangumi
 
-BAIDU_API = 'https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=<需要修改>&client_secret=<需要修改>'
+from frame_box import FrameBox
 
+frameBox = FrameBox()
+
+config = json.loads(open("config.json").read())
+BAIDU_API = config['baiduAPI']
 
 rate = json.loads(open("setting.json").read())['rate']
 crf = json.loads(open("setting.json").read())['crf']
@@ -73,7 +77,8 @@ def update(tags, brief, st):  # 从 cid 视频的 st 帧开始
         lst = now
         brief['time'] = st / rate
         image = get_file_content(file)
-        ret = upload(image, tags, brief)  # 调用API
+        print("brief:", brief)
+        """ ret = upload(image, tags, brief)  # 调用API
         try:
             cont_sign = ret['cont_sign']
             open("cont_sign/%d" % cid, "a").write(str(cont_sign)+'\n')
@@ -89,7 +94,7 @@ def update(tags, brief, st):  # 从 cid 视频的 st 帧开始
                 cont_sign = ret['cont_sign']
                 open("cont_sign/%d" % cid, "a").write(str(cont_sign)+'\n')
             except:
-                pass
+                pass """
         os.remove(file)  # 删除图片
     fin = json.loads(open("finish.json").read())
     fin.append(cid)

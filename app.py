@@ -23,17 +23,17 @@ class App:
         def use(self):
             self.value += 1
             return self.value
+    class SavedInfo:
+        def save_req(self):
+            pass
     def __init__(self):
-        self.sql_conn = sqlite3.connect('sql%sframes.db'%(os.sep))
-        self.sql_cursor = self.sql_conn.cursor()
-        sql_cmd_f = open("init.sql")
-        self.SQL_INIT_CMD = sql_cmd_f.read()
-        sql_cmd_f.close()
         self.req_num = 0
         self.hash_buffer = []
         self.unique_id = Id()
         self.IMAGE_SAVE_PATH = os.path.join("image", "upload")
         self.IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+        self.search_client = HashSearchClient()
+        self.frame_box = FrameBox()
 
     def create_flask(self):
         flask = Flask(__name__, instance_relative_config=True)
@@ -46,7 +46,7 @@ class App:
                 if method == "pic":
                     image = request.files["pic"]
                     response['result'] = self.search_pic(image)
-                    response['qid'] = self.save_request(image)
+                    self.save_image(image)
 
             return response
 
@@ -58,27 +58,14 @@ class App:
     def setup(self):
         self.sql_cursor.execute(self.SQL_INIT_CMD)
 
-    def add_frame(self, hash_str, brief):
-        name = brief['name']
-        cid = brief['cid']
-        time = brief['time']
-        self.sql_cursor.execute(
-            'INSERT INTO hash (hash, cid, time) VALUES (%d, %s, %d)'
-            %(int(hash_str, 16), cid, time)
-            )
-        self.sql_cursor.execute(
-            'INSERT INTO cid (cid, name) VALUES (%s, %s)'%(cid, name)
-            )
+    
 
-        self.hash_buffer.append(hash_str)
-
-    def save_request(self, image):
+    def save_image(self, image):
         extension = os.path.splitext(image.filename[-1])
         if (extension not in self.IMAGE_EXTENSIONS):
             return -1
-        now_num = self.sql_cursor.execute('SELECT max(qid) from request').fetchall()[0][0] + 1
+        now_num = 0
         save_path = os.path.join(self.IMAGE_SAVE_PATH, '%d.%s'%(now_num, extension))
-        self.sql_cursor.execute('INSERT INTO request (img_path) VALUES(%s)'%save_path)
         image.save(save_path)
         return now_num
 
@@ -86,25 +73,10 @@ class App:
         path = self.sql_cursor.execute('SELECT ')
     
     def search_hash(self, hash_str):
-        req_id = self.unique_id.use()
-        f = open(os.path.join(self.SEARCH_REQ_PATH, "%d.req"%req_id))
-        f.write(hash_str)
-        f.close()
-        res = self.get_res(req_id)
-        result = []
-        for row in res.split('\n'):
-            if row != '':
-                data = row.split(' ')
-                from_hash = self.db_search_hash(data[1])
-                for i in from_hash:
-                    cid = i[1]
-                    from_cid = self.db_search_cid(cid)
-                    result.append({
-                        'cid': cid,
-                        'time': i[2],
-                        'name': from_cid[1]
-                    })
-        return result
+        results = self.search_client.search_hash(hash_str)
+        results = self.frame_box.search_hash(results)
+        results = self.frame_box.search_cid(results)
+        return results
 
     
 

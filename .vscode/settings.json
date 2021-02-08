@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "C:\\Users\\havec\\AppData\\Local\\Programs\\Python\\Python38\\python.exe",
+    "python.pythonPath": "/usr/bin/python3",
     "files.associations": {
         "array": "cpp",
         "atomic": "cpp",

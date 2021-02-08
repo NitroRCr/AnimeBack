@@ -30,7 +30,7 @@ import imageio
 imageio.plugins.ffmpeg.download()
 
 # 访问API地址
-
+config = json.loads(open("config.json").read())
 
 def get_play_list(aid, cid, quality):
     url_api = 'https://api.bilibili.com/x/player/playurl?cid={}&avid={}&qn={}'.format(
@@ -38,7 +38,7 @@ def get_play_list(aid, cid, quality):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
         # 登录B站后复制一下cookie中的SESSDATA字段,有效期1个月
-        'Cookie': 'SESSDATA=请修改成你的SESSDATA',
+        'Cookie': 'SESSDATA=%s'%config['SESSDATA'],
         'Host': 'api.bilibili.com'
     }
     html = requests.get(url_api, headers=headers).json()
