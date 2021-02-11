@@ -11,6 +11,7 @@ import time
 import sqlite3
 import os
 import imagehash
+flask_app = None
 class App:
             
     def __init__(self):
@@ -73,8 +74,9 @@ class App:
         @flask.route('/', methods = ['GET'])
         def getIndex():
             return flask.send_static_file('index.html')
-        
-        flask.run()
+
+        global flask_app
+        flask_app = flask
 
     def search_pic(self, image):
         hash_str = str(imagehash.dhash(Image.open(image)))
