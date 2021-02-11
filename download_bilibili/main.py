@@ -156,6 +156,7 @@ def update_season(season_id, tags):
             code = pre_video(key['id'], key['cid'])
             if code < 0:
                 add_to_failed(key['id'], key['cid'])
+                continue
             update(tags, brief, 1)
         except KeyboardInterrupt:
             sys.exit(0)
@@ -188,7 +189,7 @@ def add_to_failed(epid, cid):
         "epid": epid,
         "cid": cid
     })
-    f = open(os.path.join(CURR_PATH, "faild.json"))
+    f = open(os.path.join(CURR_PATH, "failed.json"))
     f.write(json.dumps(failed))
     f.close()
 
