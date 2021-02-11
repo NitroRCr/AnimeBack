@@ -1,3 +1,15 @@
+# static
+static/*
+!video/.keep
+download_bilibili/image/*
+!.keep
+download_bilibili/bilibili_video/*
+!.keep
+sql/frames.db
+
+# test
+test.py
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
