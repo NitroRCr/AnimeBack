@@ -1,29 +1,31 @@
 import socket
 import json
 
-class HashSearchClient:
+class HashSearchClient(object):
     def __init__(self):
         self.IP_PORT = ('127.0.0.1', 8899)
         self.req_num = 0
 
     def req(self, req_str):
-        socket = socket.socket()     # 创建套接字
-        socket.settimeout(2)
-        socket.connect(self.IP_PORT)
-        socket.send(req_str.encode())
-        socket.send("eof\n".encode())
-        res = socket.recv(4096).decode()
-        socket.close()
+        s = socket.socket()     # 创建套接字
+        s.settimeout(5)
+        s.connect(self.IP_PORT)
+        print("search client:", self.solve_len(req_str))
+        s.send(req_str.encode())
+        s.send("eof\n".encode())
+        res = s.recv(4096).decode()
+        print("search server:", self.solve_len(res))
+        s.close()
         return res
 
-    def search_hash(self, hash):
+    def search_hash(self, hash_str):
         res = self.req(json.dumps({
             "jsonrpc": "2.0",
             "id": self.req_num,
             "method": "search",
             "params": {
                 "searchMethod": "hash",
-                "hash": hash
+                "hash": hash_str
             }
         }))
         res_obj = json.loads(res)
@@ -50,3 +52,10 @@ class HashSearchClient:
             pass
         self.req_num += 1
         return res_obj['result']
+
+    
+    def solve_len(self, string):
+        if len(string) > 1000:
+            return string[0:1000] + "..."
+        else:
+            return string

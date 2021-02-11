@@ -1,6 +1,5 @@
-
+# -*- coding: utf-8 -*-
 # !/usr/bin/python
-# -*- coding:utf-8 -*-
 # time: 2019/07/21--20:12
 __author__ = 'Henry'
 
@@ -26,11 +25,12 @@ import sys
 import threading
 import json
 
-import imageio
-imageio.plugins.ffmpeg.download()
+import imageio_ffmpeg
+
+CURR_PATH = "download_bilibili"
 
 # 访问API地址
-config = json.loads(open("config.json").read())
+config = json.loads(open(os.path.join(CURR_PATH, "config.json")).read())
 
 def get_play_list(aid, cid, quality):
     url_api = 'https://api.bilibili.com/x/player/playurl?cid={}&avid={}&qn={}'.format(
@@ -45,6 +45,7 @@ def get_play_list(aid, cid, quality):
     # print(html)
     # 当下载会员视频时,如果cookie中传入的不是大会员的SESSDATA时就会返回: {'code': -404, 'message': '啥都木有', 'ttl': 1, 'data': None}
     if html['code'] != 0:
+        print(html)
         print('注意!当前集数为B站大会员专享,若想下载,Cookie中请传入大会员的SESSDATA')
         return 'NoVIP'
     video_list = []
@@ -124,7 +125,7 @@ def down_video(video_list, title, start_url, page):
     num = 1
     print('[正在下载第{}话视频,请稍等...]:'.format(page) + title)
     currentVideoPath = os.path.join(
-        sys.path[0], 'bilibili_video', title)  # 当前目录作为下载目录
+        sys.path[0], CURR_PATH, 'bilibili_video', title)  # 当前目录作为下载目录
     for i in video_list:
         opener = urllib.request.build_opener()
         # 请求头
@@ -156,9 +157,11 @@ def down_video(video_list, title, start_url, page):
 
 # 合并视频(20190802新版)
 def combine_video(title_list):
-    video_path = os.path.join(sys.path[0], 'bilibili_video')  # 下载目录
+    video_path = os.path.join(sys.path[0], os.path.join(CURR_PATH, 'bilibili_video'))  # 下载目录
     for title in title_list:
         current_video_path = os.path.join(video_path, title)
+        if not os.path.exists(current_video_path):
+            continue
         if len(os.listdir(current_video_path)) >= 2:
             # 视频大于一段才要合并
             print('[下载完成,正在合并视频...]:' + title)
@@ -276,7 +279,7 @@ def download_video(ep_url, quality):
           (end_time - start_time, int(end_time - start_time) / 60))
     # 如果是windows系统，下载完成后打开下载目录
     currentVideoPath = os.path.join(
-        sys.path[0], 'bilibili_video')  # 当前目录作为下载目录
+        sys.path[0], CURR_PATH, 'bilibili_video')  # 当前目录作为下载目录
     # if (sys.platform.startswith('win')):
     #    os.startfile(currentVideoPath)
 
