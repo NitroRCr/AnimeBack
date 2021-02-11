@@ -189,7 +189,7 @@ def add_to_failed(epid, cid):
         "epid": epid,
         "cid": cid
     })
-    f = open(os.path.join(CURR_PATH, "failed.json"))
+    f = open(os.path.join(CURR_PATH, "failed.json"), 'w')
     f.write(json.dumps(failed))
     f.close()
 
