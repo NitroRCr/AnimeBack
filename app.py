@@ -1,8 +1,6 @@
+# -*- coding: utf-8 -*-
 from flask import Flask
-from flask import request
-from flask import redirect
-from flask import url_for
-from flask import escape
+from flask import request, redirect, url_for, escape, abort
 from PIL import Image
 from search_client import HashSearchClient
 from frame_box import FrameBox
@@ -10,7 +8,9 @@ import json
 import time
 import sqlite3
 import os
+import re
 import imagehash
+import urllib.request
 flask_app = None
 class App:
             
@@ -65,9 +65,34 @@ class App:
                         response['pic_url'] = self.save_image(image, qid)
                         response['result'] = self.search_pic(image)
                     elif method == "url":
-                        pass
+                        matched = re.match(r'((https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|])',
+                            request.form['url'])
+                        if matched:
+                            try:
+                                save_path = os.path.join(self.IMAGE_SAVE_PATH, str(qid))
+                                urllib.request.urlretrieve(matched.group(1), filename=save_path)
+                            except urllib.error.HTTPError:
+                                return {
+                                    "error_code": 400,
+                                    "error_msg": "无效的图像链接"
+                                }
+                            try:
+                                hash_str = str(imagehash.dhash(Image.open(save_path)))
+                            except TypeError:
+                                return {
+                                    "error_code": 400,
+                                    "error_msg": "无效的图像链接"
+                                }
+
+                            response['pic_url'] = "/img/upload/%d"%qid
+                            response['result'] = self.search_hash(hash_str)
+                        else:
+                            return {
+                                "error_code": 400,
+                                "error_msg": "无效的URL"
+                            }
                     else:
-                        pass
+                        abort(400)
                     self.save_res(response)
             return response
 
@@ -107,10 +132,10 @@ class App:
         if (extension not in self.IMAGE_EXTENSIONS):
             return -1
         now_num = qid
-        save_path = os.path.join(self.IMAGE_SAVE_PATH, '%d%s'%(now_num, extension))
+        save_path = os.path.join(self.IMAGE_SAVE_PATH, '%d'%(now_num))
         try:
             image.save(save_path)
-            return "/img/upload/%d%s"%(now_num, extension)
+            return "/img/upload/%d"%(now_num)
         except FileNotFoundError:
             os.makedirs(self.IMAGE_SAVE_PATH)
             return self.save_image(image)
@@ -122,6 +147,5 @@ class App:
         results = self.frame_box.set_bili_url(results)
         return results
 
-if __name__ == '__main__':
-    app = App()
+app = App()
 
