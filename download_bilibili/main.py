@@ -27,7 +27,7 @@ crf = json.loads(open(os.path.join(CURR_PATH, "setting.json")).read())['crf']
 resolution = json.loads(open(os.path.join(CURR_PATH, "setting.json")).read())['resolution']
 finish = json.loads(open(os.path.join(CURR_PATH, "finish.json")).read())
 fail_f = open(os.path.join(CURR_PATH, "failed.json"))
-failed = fail_f.read()
+failed = json.loads(fail_f.read())
 fail_f.close()
 
 
