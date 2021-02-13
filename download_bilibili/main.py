@@ -80,10 +80,10 @@ def update(tags, brief, st):  # 从 cid 视频的 st 帧开始
                 break
             now = imagehash.dhash(Image.open(file))
             sim = (1 - (now - lst) / len(now.hash) ** 2)
-            print("%f %d" % (sim, st))
             if sim >= 0.90:  # 如果与上一帧相似度大于90%，跳过
                 os.remove(file)
                 continue
+            print("%f %d" % (sim, st))
             lst = now
             brief['time'] = st / rate
             if if_use_baidu_api:
@@ -185,13 +185,15 @@ def main():
         update(tags, brief, 1)
 
 def add_to_failed(epid, cid):
-    failed.append({
+    curr_failed = {
         "epid": epid,
         "cid": cid
-    })
-    f = open(os.path.join(CURR_PATH, "failed.json"), 'w')
-    f.write(json.dumps(failed))
-    f.close()
+    }
+    if curr_failed not in failed:
+        failed.append(curr_failed)
+        f = open(os.path.join(CURR_PATH, "failed.json"), 'w')
+        f.write(json.dumps(failed))
+        f.close()
 
 if __name__ == "__main__":
     main()
