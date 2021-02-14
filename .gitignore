@@ -1,14 +1,16 @@
 # static
-static/*
-!video/.keep
-download_bilibili/image/*
+/static/*
+/download_bilibili/image/*
+/download_bilibili/bilibili_video/*
+/sql/frames.db
 !.keep
-download_bilibili/bilibili_video/*
-!.keep
-sql/frames.db
 
-# test
-test.py
+# IDE
+.vscode/
+
+# conf
+/state.json
+/download_bilibili/*.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

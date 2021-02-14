@@ -1,8 +1,8 @@
-CREATE TABLE hash
+CREATE TABLE frames
 (
-    hash VARCHAR(16) NOT NULL,
+    frame_id INTEGER PRIMARY KEY,
     cid INTEGER NOT NULL,
-    time SMALLINT NOT NULL
+    time REAL NOT NULL
 );
 
 CREATE TABLE cid
@@ -10,14 +10,12 @@ CREATE TABLE cid
     cid INTEGER NOT NULL PRIMARY KEY,
     bvid VARCHAR(16) NOT NULL,
     epid INTEGER NOT NULL,
-    name VARCHAR(64) NOT NULL
+    name VARCHAR(64) NOT NULL,
+    season_id INTEGER NOT NULL
 );
 
-CREATE INDEX idx_hash
-ON hash (hash);
-
-/* CREATE TABLE request
+CREATE TABLE season_id
 (
-    qid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    img_path VARCHAR(64) NOT NULL
-); */
+    season_id INTEGER PRIMARY KEY,
+    info VARCHAR(512) NOT NULL
+);

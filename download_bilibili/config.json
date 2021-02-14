@@ -1,6 +1,0 @@
-{
-    "videoOutPath": "static/video",
-    "ifUseBaiduAPI": false,
-    "baiduAPI": "https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=<需要修改>&client_secret=<需要修改>",
-    "SESSDATA": "fd1ef6b0%2C1628315392%2Cc739e%2A21"
-}

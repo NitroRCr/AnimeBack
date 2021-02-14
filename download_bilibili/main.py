@@ -4,40 +4,32 @@ CURR_PATH = "download_bilibili"
 import sys
 sys.path.append(CURR_PATH)
 
+import init_conf
 from down_bilibili import download_video
-import requests
 import json
 import os
-import time
-import base64
 from PIL import Image
 import imagehash
 from bilibili_api import bangumi
 from frame_box import FrameBox
 
-frameBox = FrameBox()
+frame_box = FrameBox()
 
-config = json.loads(open(os.path.join(CURR_PATH, "config.json")).read())
-BAIDU_API = config['baiduAPI']
+def get_json(filename):
+    f = open(os.path.join(CURR_PATH, filename))
+    ret = json.loads(f.read())
+    f.close()
+    return ret
+
+config = get_json("config.json")
 VIDEO_OUT_PATH = config['videoOutPath']
-if_use_baidu_api = config['ifUseBaiduAPI']
 
-rate = json.loads(open(os.path.join(CURR_PATH, "setting.json")).read())['rate']
-crf = json.loads(open(os.path.join(CURR_PATH, "setting.json")).read())['crf']
-resolution = json.loads(open(os.path.join(CURR_PATH, "setting.json")).read())['resolution']
-finish = json.loads(open(os.path.join(CURR_PATH, "finish.json")).read())
-fail_f = open(os.path.join(CURR_PATH, "failed.json"))
-failed = json.loads(fail_f.read())
-fail_f.close()
-
-
-def getak():
-    response = requests.get(BAIDU_API)
-    return response.json()['access_token']
-
-if if_use_baidu_api:
-    access_token = getak()
-
+SETTING = get_json("setting.json")
+rate = SETTING['rate']
+crf = SETTING['crf']
+resolution = SETTING['resolution']
+finish = get_json("finish.json")
+failed = get_json("failed.json")
 
 def end_task(frame, brief, tags):
     f = open(os.path.join(CURR_PATH, "pre.json"), "w")
@@ -46,71 +38,37 @@ def end_task(frame, brief, tags):
     f.close()
     sys.exit(0)
 
-
-tags = "33378,1"
-
-
-def get_file_content(filePath):
-    return base64.b64encode(open(filePath, 'rb').read())
-
-
-def upload(image, tags, brief):
-    params = {"image": image, "brief": json.dumps(brief), "tags": tags}
-    request_url = "https://aip.baidubce.com/rest/2.0/image-classify/v1/realtime_search/similar/add"
-    request_url = request_url + "?access_token=" + access_token
-    headers = {'content-type': 'application/x-www-form-urlencoded'}
-    time.sleep(0.5)
-    try:
-        return requests.post(request_url, data=params, headers=headers).json()
-    except:
-        return {'error_code': 233}
-
+tags = ""
 
 def update(tags, brief, st):  # 从 cid 视频的 st 帧开始
-    lst = imagehash.phash(Image.open(os.path.join(CURR_PATH, "black.jpeg")))
-    cid = brief['cid']
+    lst = imagehash.dhash(Image.open(os.path.join(CURR_PATH, "black.jpeg")))
     st -= 1
+    frame_box.connect()
+    frame_box.set_tag(tags)
+    frame_box.set_brief(brief)
     while (True):
         try:
             st += 1
+            cid = brief['cid']
             file = os.path.join(CURR_PATH, 'image/%d/%d.jpeg' % (cid, st))
             if (os.path.exists(file) == False):
-                if not if_use_baidu_api:
-                    frameBox.flush()
+                frame_box.close()
                 break
             now = imagehash.dhash(Image.open(file))
             sim = (1 - (now - lst) / len(now.hash) ** 2)
             if sim >= 0.90:  # 如果与上一帧相似度大于90%，跳过
                 os.remove(file)
                 continue
-            print("%f %d" % (sim, st))
             lst = now
-            brief['time'] = st / rate
-            if if_use_baidu_api:
-                image = get_file_content(file)
-                ret = upload(image, tags, brief)  # 调用API
-                try:
-                    cont_sign = ret['cont_sign']
-                    open(os.path.join(CURR_PATH, "cont_sign/%d" % cid), "a").write(str(cont_sign)+'\n')
-                except:
-                    error_code = ret['error_code']
-                    if error_code == 17 or error_code == 19:  # 今日调用次数达到限制
-                        end_task(st, brief, tags)
-                    if error_code == 216681:  # 完全相同的图片不能入库
-                        continue
-                    time.sleep(5)
-                    ret = upload(image, tags, brief)  # 重新尝试
-                    try:
-                        cont_sign = ret['cont_sign']
-                        open(os.path.join(CURR_PATH, "cont_sign/%d" % cid), "a").write(str(cont_sign)+'\n')
-                    except:
-                        pass
-            else:
-                frameBox.add_frame(Image.open(file), brief)
+            time = st / rate
+            brief['time'] = time
+            frame_box.add_frame(file, {"cid": cid, "time": time})
+            print("Add frame %d. sim: %f, time: %.1f." % (st, sim, time))
         except KeyboardInterrupt:
+            frame_box.close()
             end_task(st, brief, tags)
         os.remove(file)  # 删除图片
-    fin = json.loads(open(os.path.join(CURR_PATH, "finish.json")).read())
+    fin = get_json("finish.json")
     fin.append(cid)
     f = open(os.path.join(CURR_PATH, "finish.json"), "w")
     f.write(json.dumps(fin, indent=4, separators=(',', ': ')))  # 放入处理完成列表
@@ -136,7 +94,6 @@ def pre_video(epid, cid):  # 视频预处理
             video, crf, resolution, out_path))  # 压缩视频
     if os.path.exists(os.path.join(CURR_PATH, "image", str(cid))) == False:
         os.mkdir(os.path.join(CURR_PATH, "image", str(cid)))
-        # os.system("mkdir image/" + str(cid))
     pic_path = os.path.join(CURR_PATH, "image", str(cid), "%d.jpeg")
     os.system(
         "ffmpeg -i %s -r %d -q:v 2 -f image2 %s" % (video, rate, pic_path))  # 转化成图片
@@ -165,15 +122,15 @@ def update_season(season_id, tags):
             add_to_failed(key['id'], key['cid'])
 
 def main():
-    pre = json.loads(open(os.path.join(CURR_PATH, "pre.json")).read())
+    pre = get_json("pre.json")
 
-    if pre['frame'] != 0:
+    if pre['frame'] > 0:
         st = pre['frame']
         pre['frame'] = 0
         open(os.path.join(CURR_PATH, "pre.json"), "w").write(json.dumps(pre))
         update(pre['tags'], pre['brief'], st)
 
-    queue = json.loads(open(os.path.join(CURR_PATH, "setting.json")).read())['queue']
+    queue = get_json('setting.json')['queue']
     for key in queue['season_id']:
         update_season(key[1], key[0])
     for key in queue['epid']:
@@ -192,10 +149,9 @@ def add_to_failed(epid, cid):
     if curr_failed not in failed:
         failed.append(curr_failed)
         f = open(os.path.join(CURR_PATH, "failed.json"), 'w')
-        f.write(json.dumps(failed))
+        f.write(json.dumps(failed, indent=4, separators=(',', ': ')))
         f.close()
 
 if __name__ == "__main__":
     main()
-
 

@@ -2,162 +2,186 @@
 import os
 import sqlite3
 from bilibili_api import bangumi
-import imagehash
-from search_client import HashSearchClient
+from milvus import Milvus, IndexType, MetricType, Status
+from extract_cnn_vgg16_keras import VGGNet
 
 class FrameBox(object):
     def __init__(self):
         self.DB_PATH = os.path.join("sql", "frames.db")
         self.INIT_SQL_PATH = os.path.join("sql", "init.sql")
         self.BUFFER_MAX_LEN = 100
-        self.search_client = HashSearchClient()
-        self.hash_buffer = []
-        self.last_cid = ""
+        self.frame_buffer = []
+        self.COLL_NAME = "frames"
+        self.model = VGGNet()
+        self.milvus = None
+        self.sql_conn = None
+        self.sql_cursor = None
+        self.curr_tag = ""
+        self.curr_cid = ""
+        self.curr_tags = []
+        self.curr_cids = []
+
+    def create_collection(self):
+        self.milvus.create_collection({
+            'collection_name': self.COLL_NAME,
+            'dimension': 512,
+            'index_file_size': 512,
+            'metric_type': MetricType.L2
+        })
+        self.milvus.create_index(self.COLL_NAME, IndexType.IVF_SQ8, params = {
+            "M": 12,
+            "efConstruction": 500
+        })
+
+    def get_all_cid(self):
+        self.sql_cursor.execute("SELECT cid FROM cid")
+        fetched =self.sql_cursor.fetchall()
+        return [i[0] for i in fetched]
+
+    def set_tag(self, tag):
+        self.curr_tag = tag
+        if (tag != "") and (tag not in self.curr_tags):
+            self.milvus.create_partition(self.COLL_NAME, tag)
+            self.curr_tags.append(tag)
+
+    def set_brief(self, brief):
+        cid = brief['cid']
+        self.curr_cid = cid
+        if cid not in self.curr_cids:
+            epid = brief['epid']
+            bvid = brief['bvid']
+
+            try:
+                info = bangumi.get_episode_info(epid=epid)
+            except BaseException as e:
+                print('except:', e)
+                return
+
+            name = info['h1Title']
+            season_id = info['mediaInfo']['ssId']
+            command = ('INSERT INTO cid (cid, name, epid, bvid, season_id)'
+                'VALUES (%d, "%s", %d, "%s", %d)'%(cid, name, epid, bvid, season_id))
+            try:
+                self.sql_cursor.execute(command)
+                print("add info", command)
+            except sqlite3.IntegrityError as e:
+                print("Warn: cid repeated")
+            self.sql_conn.commit()
+            self.curr_cids.append(cid)
 
     def connect(self):
         self.sql_conn = sqlite3.connect(self.DB_PATH)
         self.sql_cursor = self.sql_conn.cursor()
+        self.milvus = Milvus(host='localhost', port='19530')
+        
+        collections = self.milvus.list_collections()[1]
+        if not self.COLL_NAME in collections:
+            self.create_collection()
 
-    def close(self, with_commit = False):
-        self.sql_cursor.close()
-        if (with_commit):
-            self.sql_conn.commit()
-        self.sql_conn.close()
-
-    def add_hash(self, hash_str, brief):
-        cid = brief['cid']
-        time = brief['time']
-        self.connect()
+        self.curr_tags = list(self.milvus.list_partitions(self.COLL_NAME))
         try:
-            self.sql_cursor.execute(
-                'INSERT INTO hash (hash, cid, time) VALUES ("%s", %d, %f)'
-                %(hash_str, cid, time)
-            )
-            print("add frame:", cid, time)
-        except sqlite3.IntegrityError as e:
-            self.close()
-            print("Warn: frame repeated")
-            return
+            self.curr_cids = self.get_all_cid()
         except sqlite3.OperationalError as e:
-            self.close()
+            # first run
             self.init_db()
-            print("table 'hash' not found, created")
-            self.add_hash(hash_str, brief)
-            return
-        self.close(True)
-        self.append_to_buffer(hash_str)
+            print("table not found, created.")
+            self.curr_cids = self.get_all_cid()
 
-    def append_to_buffer(self, hash_str):
-        if len(self.hash_buffer) >= self.BUFFER_MAX_LEN:
+
+    def close(self):
+        self.flush()
+        self.sql_cursor.close()
+        self.sql_conn.close()
+        self.milvus.close()
+
+    def append_to_buffer(self, feat, brief):
+        if len(self.frame_buffer) >= self.BUFFER_MAX_LEN:
             self.flush()
-        self.hash_buffer.append(hash_str)
+        self.frame_buffer.append({"feat": feat, "brief": brief})
 
     def flush(self):
-        self.search_client.add_hash(self.hash_buffer)
-        self.hash_buffer = []
+        if len(self.frame_buffer) == 0:
+            return
+        self.sql_cursor.execute("SELECT max(frame_id) FROM frames")
+        now_id = self.sql_cursor.fetchall()[0][0]
+        if now_id == None:
+            now_id = 0
+        vectors = []
+        ids = []
+        for i in self.frame_buffer:
+            now_id += 1
+            vectors.append(i['feat'])
+            ids.append(now_id)
+            brief = i['brief']
+            self.sql_cursor.execute(
+                'INSERT INTO frames (frame_id, cid, time) VALUES ("%d", %d, %f)'
+                %(now_id, brief['cid'], brief['time'])
+            )
+        if self.curr_tag != "":
+            res = self.milvus.insert(self.COLL_NAME, vectors,
+                partition_tag=self.curr_tag, ids = ids)
+        else:
+            res = self.milvus.insert(collection_name = self.COLL_NAME,
+                ids = ids, records = vectors)
+        print("milvus response:", res)
+        self.sql_conn.commit()
+        self.frame_buffer = []
         
-
-    def search_hash(self, half_results):
-        self.connect()
-        table_info = self.sql_cursor.execute('PRAGMA table_info(hash)').fetchall()
-        keys = []
-        for i in table_info:
-            keys.append(i[1])
-        results = []
-        last_hash = ""
-        for i in half_results:
-            if i['hash'] == last_hash:
-                continue
-            last_hash = i['hash']
-            self.sql_cursor.execute('select * from hash where hash=?', (i['hash'],))
-            fetched = self.sql_cursor.fetchall()
-            print('fetched:', fetched)
-            for j in fetched:
-                result = {}
-                for k in range(len(keys)):
-                    result[keys[k]] = j[k]
-                for k2 in i:
-                    result[k2] = i[k2]
-                results.append(result)
-        self.close()
-        return results
     
-    def search_cid(self, half_results):
-        self.connect()
-        table_info = self.sql_cursor.execute('PRAGMA table_info(cid)').fetchall()
-        keys = []
-        for i in table_info:
-            keys.append(i[1])
-        for i in half_results:
-            self.sql_cursor.execute('select * from cid where cid=?', (i['cid'],))
-            fetched = self.sql_cursor.fetchall()
-            print('fetched:', fetched)
+    def search_img(self, img_path, tags = None, resultNum = 20):
+        vector = self.model.extract_feat(img_path).tolist()
+        results = self.milvus.search(self.COLL_NAME, resultNum, [vector],
+            partition_tags=tags, params={"ef": max(resultNum, 40)})
+        return [{'frame_id': result.id, 'score': 1 - result.distance/2}
+            for result in results[1][0]]
+
+    def search_frame_id(self, results):
+        table_info = self.sql_cursor.execute('PRAGMA table_info(frames)').fetchall()
+        keys = [i[1] for i in table_info]
+        for i in results:
+            self.sql_cursor.execute('SELECT * FROM frames WHERE frame_id=?', (i['frame_id'],))
+            frame = self.sql_cursor.fetchall()[0]
+            print('fetched:', frame)
             for j in range(len(keys)):
-                i[keys[j]] = fetched[0][j]
-        self.close()
-        return half_results
+                i[keys[j]] = frame[j]
+        return results
+
+    def search_cid(self, results):
+        table_info = self.sql_cursor.execute('PRAGMA table_info(cid)').fetchall()
+        keys = [i[1] for i in table_info]
+        for i in results:
+            self.sql_cursor.execute('select * from cid where cid=?', (i['cid'],))
+            cid_info = self.sql_cursor.fetchall()[0]
+            print('fetched:', cid_info)
+            for j in range(len(keys)):
+                i[keys[j]] = cid_info[j]
+        return results
+
+    def search_with_info(self, img_path, tags = None, resultNum = 20):
+        results = self.search_img(img_path, tags, resultNum)
+        results = self.search_frame_id(results)
+        results = self.search_cid(results)
+        results = self.set_bili_url(results)
+        return results
 
     def init_db(self):
         sql_cmd_f = open(self.INIT_SQL_PATH)
-        self.connect()
         self.sql_cursor.executescript(sql_cmd_f.read())
-        self.close(True)
+        self.sql_conn.commit()
         sql_cmd_f.close()
 
-    def add_frame(self, image, brief):
-        cid = brief['cid']
-        bvid = brief['bvid']
-        epid = brief['epid']
-        time = brief['time']
-
-        self.add_hash(str(imagehash.dhash(image)), brief)
-        if cid == self.last_cid:
-            return
-
-        try:
-            info = bangumi.get_episode_info(epid=epid)
-        except BaseException as e:
-            print('except:', e)
-            return
-        
-        name = info['h1Title']
-        self.connect()
-        command = ('INSERT INTO cid (cid, name, epid, bvid)'
-            'VALUES (%d, "%s", %d, "%s")'%(cid, name, epid, bvid))
-        try:
-            self.sql_cursor.execute(command)
-            print("add info", command)
-        except sqlite3.IntegrityError as e:
-            print("Warn: cid repeated")
-        self.close(True)
-        self.last_cid = cid
+    def add_frame(self, img_path, brief):
+        feat = self.model.extract_feat(img_path).tolist()
+        self.append_to_buffer(feat, brief)
 
     def set_bili_url(self, results):
         for i in results:
             if i['epid']:
-                i['bili_url'] = 'https://www.bilibili.com/bangumi/play/ep%d?t=%f'%(i['epid'], i['time'])
+                i['bili_url'] = 'https://www.bilibili.com/bangumi/play/ep%d?t=%.1f'%(i['epid'], i['time'])
             elif i['bvid']:
-                i['bili_url'] = 'https://www.bilibili.com/video/%s?t=%f'%(i['bvid'], i['time'])
+                i['bili_url'] = 'https://www.bilibili.com/video/%s?t=%.1f'%(i['bvid'], i['time'])
         return results
 
-    def push_all_hash(self):
-        print("start push all hash")
-        self.connect()
-        self.sql_cursor.execute("SELECT max(rowid) from hash")
-        all_num = self.sql_cursor.fetchall()[0][0]
-        print("hash all num:", all_num)
-        num = 0
-        while num < all_num:
-            print("pushed:", num)
-            self.sql_cursor.execute("SELECT hash FROM hash WHERE rowid > ? AND rowid <= ?", (num, num + 10000))
-            fetched = self.sql_cursor.fetchall()
-            hashList = []
-            for i in fetched:
-                hashList.append(i[0])
-            self.search_client.add_hash(hashList)
-            num += 10000
-        self.close()
-        print("done")
-
-
-        
+    def close(self):
+        self.flush()
+        self.milvus.close()

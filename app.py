@@ -1,15 +1,11 @@
 # -*- coding: utf-8 -*-
 from flask import Flask
-from flask import request, redirect, url_for, escape, abort
-from PIL import Image
-from search_client import HashSearchClient
+from flask import request, url_for, abort
 from frame_box import FrameBox
+import init_conf
 import json
-import time
-import sqlite3
 import os
 import re
-import imagehash
 import urllib.request
 flask_app = None
 class App:
@@ -25,7 +21,6 @@ class App:
         self.PRE_URL = ""
         
         self.state = json.loads(open(self.STATE_PATH).read())
-        self.search_client = HashSearchClient()
         self.frame_box = FrameBox()
         self.create_flask()
 
@@ -59,11 +54,21 @@ class App:
                 else:
                     response = {}
                     qid = self.get_req_num()
+                    if "tags" in request.form:
+                        try:
+                            tags = json.loads(request.form['tags'])
+                            if len(tags) == 0:
+                                tags = None
+                        except:
+                            tags = None
+                    else:
+                        tags = None
                     response['qid'] = qid
                     if method == "pic":
                         image = request.files["pic"]
-                        response['pic_url'] = self.save_image(image, qid)
-                        response['result'] = self.search_pic(image)
+                        save_res = self.save_image(image, qid)
+                        response['pic_url'] = save_res['pic_url']
+                        response['result'] = self.search_pic(save_res['save_path'], tags)
                     elif method == "url":
                         matched = re.match(r'((https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|])',
                             request.form['url'])
@@ -76,16 +81,8 @@ class App:
                                     "error_code": 400,
                                     "error_msg": "无效的图像链接"
                                 }
-                            try:
-                                hash_str = str(imagehash.dhash(Image.open(save_path)))
-                            except TypeError:
-                                return {
-                                    "error_code": 400,
-                                    "error_msg": "无效的图像链接"
-                                }
-
                             response['pic_url'] = "/img/upload/%d"%qid
-                            response['result'] = self.search_hash(hash_str)
+                            response['result'] = self.search_pic(save_path)
                         else:
                             return {
                                 "error_code": 400,
@@ -103,9 +100,11 @@ class App:
         global flask_app
         flask_app = flask
 
-    def search_pic(self, image):
-        hash_str = str(imagehash.dhash(Image.open(image)))
-        return self.search_hash(hash_str)
+    def search_pic(self, img_path, tags):
+        self.frame_box.connect()
+        ret = self.frame_box.search_with_info(img_path, tags)
+        self.frame_box.close()
+        return ret
 
     def get_saved_res(self, qid):
         try:
@@ -135,7 +134,10 @@ class App:
         save_path = os.path.join(self.IMAGE_SAVE_PATH, '%d'%(now_num))
         try:
             image.save(save_path)
-            return "/img/upload/%d"%(now_num)
+            return {
+                "pic_url": "/img/upload/%d"%(now_num),
+                "save_path": save_path
+            }
         except FileNotFoundError:
             os.makedirs(self.IMAGE_SAVE_PATH)
             return self.save_image(image)
