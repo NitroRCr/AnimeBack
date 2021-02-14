@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import time
 from flask import Flask
 from flask import request, url_for, abort
 from frame_box import FrameBox
@@ -102,7 +103,10 @@ class App:
 
     def search_pic(self, img_path, tags):
         self.frame_box.connect()
+        t_start = time.time()
         ret = self.frame_box.search_with_info(img_path, tags)
+        t_end = time.time()
+        print("search all in %.3fs" %(t_end - t_start))
         self.frame_box.close()
         return ret
 
@@ -122,8 +126,6 @@ class App:
         except FileNotFoundError as e:
             os.makedirs(self.RES_SAVE_PATH)
             self.save_res(response)
-            
-
     
 
     def save_image(self, image, qid):

@@ -1,9 +1,10 @@
 # static
 /static/*
+!/static/video/
+/static/video/*
 /download_bilibili/image/*
 /download_bilibili/bilibili_video/*
 /sql/frames.db
-!.keep
 
 # IDE
 .vscode/

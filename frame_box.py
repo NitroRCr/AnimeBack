@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import sqlite3
+import time
 from bilibili_api import bangumi
 from milvus import Milvus, IndexType, MetricType, Status
 from extract_cnn_vgg16_keras import VGGNet
@@ -29,8 +30,7 @@ class FrameBox(object):
             'metric_type': MetricType.L2
         })
         self.milvus.create_index(self.COLL_NAME, IndexType.IVF_SQ8, params = {
-            "M": 12,
-            "efConstruction": 500
+            "nlist": 2048
         })
 
     def get_all_cid(self):
@@ -130,8 +130,11 @@ class FrameBox(object):
     
     def search_img(self, img_path, tags = None, resultNum = 20):
         vector = self.model.extract_feat(img_path).tolist()
+        t_start = time.time()
         results = self.milvus.search(self.COLL_NAME, resultNum, [vector],
-            partition_tags=tags, params={"ef": max(resultNum, 40)})
+            partition_tags=tags, params={"nprobe": 64})
+        t_end = time.time()
+        print("search vectors in %.3fs"%(t_end - t_start))
         return [{'frame_id': result.id, 'score': 1 - result.distance/2}
             for result in results[1][0]]
 
@@ -141,7 +144,6 @@ class FrameBox(object):
         for i in results:
             self.sql_cursor.execute('SELECT * FROM frames WHERE frame_id=?', (i['frame_id'],))
             frame = self.sql_cursor.fetchall()[0]
-            print('fetched:', frame)
             for j in range(len(keys)):
                 i[keys[j]] = frame[j]
         return results
@@ -152,7 +154,6 @@ class FrameBox(object):
         for i in results:
             self.sql_cursor.execute('select * from cid where cid=?', (i['cid'],))
             cid_info = self.sql_cursor.fetchall()[0]
-            print('fetched:', cid_info)
             for j in range(len(keys)):
                 i[keys[j]] = cid_info[j]
         return results
