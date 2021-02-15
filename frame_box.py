@@ -127,17 +127,10 @@ class FrameBox(object):
         self.frame_buffer = []
   
     def search_img(self, img_path, tags = None, resultNum = 20):
-        print("img_path:", img_path)
         vector = self.model.extract_feat(img_path)
-        print("vector:", vector)
         vector = vector.tolist()
-        print("milcus search")
-        t_start = time.time()
         results = self.milvus.search(self.COLL_NAME, resultNum, [vector],
             partition_tags=tags, params={"nprobe": 64}, timeout=15)
-        t_end = time.time()
-        print("result:", results)
-        print("search vectors in %.3fs"%(t_end - t_start))
         return [{'frame_id': result.id, 'score': 1 - result.distance/2}
             for result in results[1][0]]
 
@@ -162,11 +155,22 @@ class FrameBox(object):
         return results
 
     def search_with_info(self, img_path, tags = None, resultNum = 20):
-        print("start search")
+        t_0 = time.time()
         results = self.search_img(img_path, tags, resultNum)
+        t_1 = time.time()
         results = self.search_frame_id(results)
+        t_2 = time.time()
         results = self.search_cid(results)
+        t_3 = time.time()
         results = self.set_bili_url(results)
+        t_4 = time.time()
+        print({
+            1: t_1 - t_0,
+            2: t_2 - t_1,
+            3: t_3 - t_2,
+            4: t_4 - t_3,
+            "all": t_4 - t_0
+        })
         return results
 
     def init_db(self):

@@ -103,10 +103,7 @@ class App:
 
     def search_pic(self, img_path, tags):
         self.frame_box.connect()
-        t_start = time.time()
         ret = self.frame_box.search_with_info(img_path, tags)
-        t_end = time.time()
-        print("search all in %.3fs" %(t_end - t_start))
         self.frame_box.close()
         return ret
 
