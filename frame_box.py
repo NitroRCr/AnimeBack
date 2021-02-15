@@ -129,7 +129,9 @@ class FrameBox(object):
         
     
     def search_img(self, img_path, tags = None, resultNum = 20):
+        print("extract_feat")
         vector = self.model.extract_feat(img_path).tolist()
+        print("milcus search")
         t_start = time.time()
         results = self.milvus.search(self.COLL_NAME, resultNum, [vector],
             partition_tags=tags, params={"nprobe": 64}, timeout=15)
