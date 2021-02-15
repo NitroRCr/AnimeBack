@@ -140,13 +140,6 @@ class App:
         except FileNotFoundError:
             os.makedirs(self.IMAGE_SAVE_PATH)
             return self.save_image(image)
-    
-    def search_hash(self, hash_str):
-        results = self.search_client.search_hash(hash_str)
-        results = self.frame_box.search_hash(results)
-        results = self.frame_box.search_cid(results)
-        results = self.frame_box.set_bili_url(results)
-        return results
 
 app = App()
 
