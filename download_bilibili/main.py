@@ -2,10 +2,9 @@
 # !/usr/bin/python
 CURR_PATH = "download_bilibili"
 import sys
-sys.path.append(CURR_PATH)
 
 import init_conf
-from down_bilibili import download_video
+from download_bilibili.down_bilibili import download_video
 import json
 import os
 from PIL import Image
@@ -117,7 +116,8 @@ def update_season(season_id, tags):
             update(tags, brief, 1)
         except KeyboardInterrupt:
             sys.exit(0)
-        except:
+        except Exception as e:
+            print(e)
             print("failed at: cid=%d, epid=%d"%(key['cid'], key['id']))
             add_to_failed(key['id'], key['cid'])
 

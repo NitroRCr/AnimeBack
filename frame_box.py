@@ -159,8 +159,11 @@ class FrameBox(object):
         return results
 
     def search_with_info(self, img_path, tags = None, resultNum = 20):
+        print("start search")
         results = self.search_img(img_path, tags, resultNum)
+        print("search frame id")
         results = self.search_frame_id(results)
+        print("search cid")
         results = self.search_cid(results)
         results = self.set_bili_url(results)
         return results

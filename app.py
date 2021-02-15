@@ -102,7 +102,9 @@ class App:
         flask_app = flask
 
     def search_pic(self, img_path, tags):
+        print("search_pic")
         self.frame_box.connect()
+        print("connected")
         t_start = time.time()
         ret = self.frame_box.search_with_info(img_path, tags)
         t_end = time.time()
