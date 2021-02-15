@@ -132,8 +132,9 @@ class FrameBox(object):
         vector = self.model.extract_feat(img_path).tolist()
         t_start = time.time()
         results = self.milvus.search(self.COLL_NAME, resultNum, [vector],
-            partition_tags=tags, params={"nprobe": 64})
+            partition_tags=tags, params={"nprobe": 64}, timeout=15)
         t_end = time.time()
+        print("result:", results)
         print("search vectors in %.3fs"%(t_end - t_start))
         return [{'frame_id': result.id, 'score': 1 - result.distance/2}
             for result in results[1][0]]
@@ -161,9 +162,7 @@ class FrameBox(object):
     def search_with_info(self, img_path, tags = None, resultNum = 20):
         print("start search")
         results = self.search_img(img_path, tags, resultNum)
-        print("search frame id")
         results = self.search_frame_id(results)
-        print("search cid")
         results = self.search_cid(results)
         results = self.set_bili_url(results)
         return results
