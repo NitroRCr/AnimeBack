@@ -87,7 +87,6 @@ class FrameBox(object):
             print("table not found, created.")
             self.curr_cids = self.get_all_cid()
 
-
     def close(self):
         self.flush()
         self.sql_cursor.close()
@@ -126,11 +125,12 @@ class FrameBox(object):
         print("milvus response:", res)
         self.sql_conn.commit()
         self.frame_buffer = []
-        
-    
+  
     def search_img(self, img_path, tags = None, resultNum = 20):
-        print("extract_feat")
-        vector = self.model.extract_feat(img_path).tolist()
+        print("img_path:", img_path)
+        vector = self.model.extract_feat(img_path)
+        print("vector:", vector)
+        vector = vector.tolist()
         print("milcus search")
         t_start = time.time()
         results = self.milvus.search(self.COLL_NAME, resultNum, [vector],
