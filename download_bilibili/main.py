@@ -140,6 +140,7 @@ def main():
             continue
         pre_video(brief['epid'], brief['cid'])
         update(tags, brief, 1)
+    print('All Done')
 
 def add_to_failed(epid, cid):
     curr_failed = {

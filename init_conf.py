@@ -13,12 +13,8 @@ CONF_TEMPLATES = {
     "download_bilibili/pre.json": {"frame": 0},
     "download_bilibili/setting.json": {
         "queue": {
-            "season_id": [
-                []
-            ],
-            "epid": [
-                []
-            ]
+            "season_id": [],
+            "epid": []
         },
         "rate": 5,
         "crf": 36,

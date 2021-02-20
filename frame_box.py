@@ -78,7 +78,8 @@ class FrameBox(object):
         if not self.COLL_NAME in collections:
             self.create_collection()
 
-        self.curr_tags = list(self.milvus.list_partitions(self.COLL_NAME))
+        self.curr_tags = list(self.milvus.list_partitions(self.COLL_NAME)[1])
+        print("current_tags:", self.curr_tags)
         try:
             self.curr_cids = self.get_all_cid()
         except sqlite3.OperationalError as e:
