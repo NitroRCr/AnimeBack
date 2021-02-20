@@ -2,6 +2,7 @@
 import os
 import sqlite3
 import time
+import json
 from bilibili_api import bangumi
 from milvus import Milvus, IndexType, MetricType, Status
 from extract_cnn_vgg16_keras import VGGNet
@@ -21,6 +22,13 @@ class FrameBox(object):
         self.curr_cid = ""
         self.curr_tags = []
         self.curr_cids = []
+        self.config = get_json('config.json')
+
+    def get_json(path):
+        f = open(path)
+        ret = json.loads(f.read())
+        f.close()
+        return ret
 
     def create_collection(self):
         self.milvus.create_collection({
@@ -72,7 +80,7 @@ class FrameBox(object):
     def connect(self):
         self.sql_conn = sqlite3.connect(self.DB_PATH)
         self.sql_cursor = self.sql_conn.cursor()
-        self.milvus = Milvus(host='localhost', port='19530')
+        self.milvus = Milvus(host=self.config['milvus_host'], port=self.config['milvus_port'])
         
         collections = self.milvus.list_collections()[1]
         if not self.COLL_NAME in collections:
@@ -128,7 +136,9 @@ class FrameBox(object):
         self.frame_buffer = []
   
     def search_img(self, img_path, tags = None, resultNum = 20):
+        print('extract feat')
         vector = self.model.extract_feat(img_path)
+        print('extract feat done')
         vector = vector.tolist()
         results = self.milvus.search(self.COLL_NAME, resultNum, [vector],
             partition_tags=tags, params={"nprobe": 64}, timeout=15)

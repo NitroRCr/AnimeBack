@@ -4,6 +4,10 @@ CONF_TEMPLATES = {
     "state.json": {
         "requestNum": 0
     },
+    "config.json": {
+        "milvus_host": "127.0.0.1",
+        "milvus_port": 19530
+    },
     "download_bilibili/failed.json": [],
     "download_bilibili/finish.json": [],
     "download_bilibili/config.json": {
