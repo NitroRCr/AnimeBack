@@ -22,9 +22,9 @@ class FrameBox(object):
         self.curr_cid = ""
         self.curr_tags = []
         self.curr_cids = []
-        self.config = get_json('config.json')
+        self.config = self.get_json('config.json')
 
-    def get_json(path):
+    def get_json(self, path):
         f = open(path)
         ret = json.loads(f.read())
         f.close()

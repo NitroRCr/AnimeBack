@@ -47,7 +47,7 @@ def get_play_list(aid, cid, quality):
     if html['code'] != 0:
         print(html)
         print('注意!当前集数为B站大会员专享,若想下载,Cookie中请传入大会员的SESSDATA')
-        return 'NoVIP'
+        return -1
     video_list = []
     for i in html['data']['durl']:
         video_list.append(i['url'])
@@ -124,8 +124,7 @@ def format_size(bytes):
 def down_video(video_list, title, start_url, page):
     num = 1
     print('[正在下载第{}话视频,请稍等...]:'.format(page) + title)
-    currentVideoPath = os.path.join(
-        sys.path[0], CURR_PATH, 'bilibili_video', title)  # 当前目录作为下载目录
+    currentVideoPath = os.path.join(CURR_PATH, 'bilibili_video', title)  # 当前目录作为下载目录
     for i in video_list:
         opener = urllib.request.build_opener()
         # 请求头
@@ -157,7 +156,7 @@ def down_video(video_list, title, start_url, page):
 
 # 合并视频(20190802新版)
 def combine_video(title_list):
-    video_path = os.path.join(sys.path[0], os.path.join(CURR_PATH, 'bilibili_video'))  # 下载目录
+    video_path = os.path.join(CURR_PATH, 'bilibili_video')  # 下载目录
     for title in title_list:
         current_video_path = os.path.join(video_path, title)
         if not os.path.exists(current_video_path):
@@ -248,6 +247,8 @@ def download_video(ep_url, quality):
         aid = str(item[0])
         cid = str(item[1])
         title = item[2]
+        if os.path.exists(os.path.join(CURR_PATH, 'bilibili_video', cid, 'done')):
+            continue
         # title = re.sub(r'[\/\\:*?"<>|]', '', title)  # 替换为空的
         print('[下载番剧标题]:' + title)
         title_list.append(title)
@@ -256,7 +257,9 @@ def download_video(ep_url, quality):
         start_time = time.time()
         # down_video(video_list, title, start_url, page)
         # 定义线程
-        if video_list != 'NoVIP':
+        if video_list == -1:
+            return -1
+        else:
             th = threading.Thread(target=down_video, args=(
                 video_list, title, start_url, page))
             # 将线程加入线程池
@@ -277,11 +280,11 @@ def download_video(ep_url, quality):
     end_time = time.time()  # 结束时间
     print('下载总耗时%.2f秒,约%.2f分钟' %
           (end_time - start_time, int(end_time - start_time) / 60))
-    # 如果是windows系统，下载完成后打开下载目录
-    currentVideoPath = os.path.join(
-        sys.path[0], CURR_PATH, 'bilibili_video')  # 当前目录作为下载目录
-    # if (sys.platform.startswith('win')):
-    #    os.startfile(currentVideoPath)
+
+    f = open(os.path.join(CURR_PATH, 'bilibili_video', str(id_list[0][1]), 'done'), 'w')
+    f.write('done')
+    f.close()
+    return 0
 
 
 # 番剧视频下载测试: https://www.bilibili.com/bangumi/play/ep269828

@@ -3,22 +3,27 @@ import time
 from flask import Flask
 from flask import request, url_for, abort
 from frame_box import FrameBox
+from flask import after_this_request
 import init_conf
+import subprocess
 import json
 import os
 import re
 import urllib.request
+from flask.helpers import send_file
 flask_app = None
 class App:
             
     def __init__(self):
         self.req_num = 0
         self.hash_buffer = []
+        self.IMAGE_TMP_PATH = os.path.join("static", "img", "tmp")
         self.IMAGE_SAVE_PATH = os.path.join("static", "img", "upload")
         self.IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg'}
         self.STATE_PATH = "state.json"
         self.CONFIG_PATH = "config.json"
         self.RES_SAVE_PATH = os.path.join("static", "json", "response")
+        self.VIDEO_PATH = os.path.join("static", "video")
         self.PRE_URL = ""
         
         self.state = json.loads(open(self.STATE_PATH).read())
@@ -93,6 +98,30 @@ class App:
                         abort(400)
                     self.save_res(response)
             return response
+
+        @flask.route('/getframe', methods = ['POST'])
+        def get_frame():
+            cid = float(request.form['cid'])
+            time = int(request.form['time'])
+            video = os.path.join(self.VIDEO_PATH, '%d.mp4' % cid)
+            req_id = self.get_req_num()
+            tmp_img = os.path.join(self.IMAGE_TMP_PATH, '%d.jpg' % req_id)
+            f = open(tmp_img)
+            if os.path.exists(video) == False:
+                abort(400)
+            try:
+                subprocess.run('ffmpeg -ss %.1f -i %s -f image2 -frames:v 1 %s' % (time, video, tmp_img), shell=True, check=True)
+            except subprocess.CalledProcessError as e:
+                print(e)
+                abort(400)
+            @flask.after_this_request
+            def remove_file():
+                try:
+                    os.remove(tmp_img)
+                    f.close()
+                except Exception as error:
+                    flask.logger.error("Error removing or closing downloaded file handle", error)
+            return send_file(f)
 
         @flask.route('/', methods = ['GET'])
         def getIndex():
