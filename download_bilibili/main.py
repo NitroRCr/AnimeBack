@@ -95,6 +95,8 @@ def pre_video(epid, cid):  # 视频预处理
     if not os.path.exists(VIDEO_OUT_PATH):
         os.makedirs(VIDEO_OUT_PATH)
     if not os.path.exists(pre_done_mark):
+        if os.path.exists(out_path):
+            os.remove(out_path)
         subprocess.run("ffmpeg -i %s -vcodec libx264 -acodec copy -strict -2 -an -crf %d -vf scale=-2:%d %s" % (
             video, crf, resolution, out_path), check=True, shell=True)  # 压缩视频
         mark_f = open(pre_done_mark, 'w')
@@ -132,6 +134,7 @@ def get_list():
     return ep_list
 
 def download_thread():
+    global is_downloading
     is_downloading = True
     for ep in ep_list:
         if ep['status'] != 'waiting':
@@ -165,6 +168,7 @@ def try_download():
         t.start()
 
 def process():
+    global is_processing
     is_processing = True
     for ep in ep_list:
         if ep['status'] == 'downloaded':
@@ -189,6 +193,7 @@ def process():
                 add_to_failed(ep['epid'], ep['cid'])
                 continue
             ep['status'] = 'finished'
+            print('finish:', ep['cid'])
             try_download()
     is_processing = False
 

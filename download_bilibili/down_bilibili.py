@@ -65,42 +65,6 @@ def callbackfunc(blocknum, blocksize, totalsize):
 '''
 
 
-def Schedule_cmd(blocknum, blocksize, totalsize):
-    speed = (blocknum * blocksize) / (time.perf_counter())
-    # speed_str = " Speed: %.2f" % speed
-    speed_str = " Speed: %s" % format_size(speed)
-    recv_size = blocknum * blocksize
-
-    # 设置下载进度条
-    f = sys.stdout
-    pervent = recv_size / totalsize
-    percent_str = "%.2f%%" % (pervent * 100)
-    n = round(pervent * 50)
-    s = ('#' * n).ljust(50, '-')
-    f.write(percent_str.ljust(8, ' ') + '[' + s + ']' + speed_str)
-    f.flush()
-    # time.sleep(0.1)
-    f.write('\r')
-
-
-def Schedule(blocknum, blocksize, totalsize):
-    speed = (blocknum * blocksize) / (time.perf_counter())
-    # speed_str = " Speed: %.2f" % speed
-    speed_str = " Speed: %s" % format_size(speed)
-    recv_size = blocknum * blocksize
-
-    # 设置下载进度条
-    f = sys.stdout
-    pervent = recv_size / totalsize
-    percent_str = "%.2f%%" % (pervent * 100)
-    n = round(pervent * 50)
-    s = ('#' * n).ljust(50, '-')
-    print(percent_str.ljust(6, ' ') + '-' + speed_str)
-    f.flush()
-    time.sleep(2)
-    # print('\r')
-
-
 # 字节bytes转化K\M\G
 def format_size(bytes):
     try:
@@ -146,11 +110,9 @@ def down_video(video_list, title, start_url, page):
             os.makedirs(currentVideoPath)
         # 开始下载
         if len(video_list) > 1:
-            urllib.request.urlretrieve(url=i, filename=os.path.join(currentVideoPath, r'{}-{}.flv'.format(title, num)),
-                                       reporthook=Schedule_cmd)  # 写成mp4也行  title + '-' + num + '.flv'
+            urllib.request.urlretrieve(url=i, filename=os.path.join(currentVideoPath, r'{}-{}.flv'.format(title, num)))  # 写成mp4也行  title + '-' + num + '.flv'
         else:
-            urllib.request.urlretrieve(url=i, filename=os.path.join(currentVideoPath, r'{}.flv'.format(title)),
-                                       reporthook=Schedule_cmd)  # 写成mp4也行  title + '-' + num + '.flv'
+            urllib.request.urlretrieve(url=i, filename=os.path.join(currentVideoPath, r'{}.flv'.format(title)))  # 写成mp4也行  title + '-' + num + '.flv'
         num += 1
 
 

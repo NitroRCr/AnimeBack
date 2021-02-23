@@ -34,7 +34,7 @@ class FrameBox(object):
         self.milvus.create_collection({
             'collection_name': self.COLL_NAME,
             'dimension': 512,
-            'index_file_size': 512,
+            'index_file_size': 1024,
             'metric_type': MetricType.L2
         })
         self.milvus.create_index(self.COLL_NAME, IndexType.IVF_SQ8, params = {
