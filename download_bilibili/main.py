@@ -95,7 +95,7 @@ def pre_video(epid, cid):  # 视频预处理
     if not os.path.exists(VIDEO_OUT_PATH):
         os.makedirs(VIDEO_OUT_PATH)
     if not os.path.exists(pre_done_mark):
-        subprocess.run("ffmpeg -i %s -vcodec libx264  -strict -2 -an -crf %d -vf scale=-2:%d %s" % (
+        subprocess.run("ffmpeg -i %s -vcodec libx264 -acodec copy -strict -2 -an -crf %d -vf scale=-2:%d %s" % (
             video, crf, resolution, out_path), check=True, shell=True)  # 压缩视频
         mark_f = open(pre_done_mark, 'w')
         mark_f.close()

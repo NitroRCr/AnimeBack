@@ -101,12 +101,13 @@ class App:
 
         @flask.route('/getframe', methods = ['POST'])
         def get_frame():
-            cid = float(request.form['cid'])
-            time = int(request.form['time'])
+            cid = int(request.form['cid'])
+            time = float(request.form['time'])
             video = os.path.join(self.VIDEO_PATH, '%d.mp4' % cid)
             req_id = self.get_req_num()
+            if not os.path.exists(self.IMAGE_TMP_PATH):
+                os.mkdir(self.IMAGE_TMP_PATH)
             tmp_img = os.path.join(self.IMAGE_TMP_PATH, '%d.jpg' % req_id)
-            f = open(tmp_img)
             if os.path.exists(video) == False:
                 abort(400)
             try:
@@ -114,14 +115,16 @@ class App:
             except subprocess.CalledProcessError as e:
                 print(e)
                 abort(400)
-            @flask.after_this_request
-            def remove_file():
+            f = open(tmp_img)
+            """ @after_this_request
+            def remove_file(response):
                 try:
                     os.remove(tmp_img)
                     f.close()
                 except Exception as error:
                     flask.logger.error("Error removing or closing downloaded file handle", error)
-            return send_file(f)
+                return response """
+            return send_file(f, mimetype='image/jpg')
 
         @flask.route('/', methods = ['GET'])
         def getIndex():
