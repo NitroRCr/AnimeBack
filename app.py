@@ -147,7 +147,7 @@ class App:
     def search_pic(self, qid, tags, crop=False):
         origin_path = os.path.join(self.IMAGE_SAVE_PATH, str(qid))
         if crop:
-            img_path = os.path.join(self.IMAGE_TMP_PATH, str(qid))
+            img_path = os.path.join(self.IMAGE_TMP_PATH, '%d.jpg' % qid)
             self.crop_image(origin_path, img_path)
         else:
             img_path = origin_path
@@ -220,7 +220,7 @@ class App:
 
         # Crop with the largest rectangle
         crop = image[y:y+h,x:x+w]
-        cv2.imwrite(out_path,crop)
+        cv2.imwrite(out_path, crop)
 
 app = App()
 
