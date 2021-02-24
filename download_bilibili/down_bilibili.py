@@ -216,24 +216,15 @@ def download_video(ep_url, quality):
         title_list.append(title)
         start_url = ep_url
         video_list = get_play_list(aid, cid, quality)
-        start_time = time.time()
         # down_video(video_list, title, start_url, page)
         # 定义线程
         if video_list == -1:
             return -1
         else:
-            th = threading.Thread(target=down_video, args=(
-                video_list, title, start_url, page))
+            down_video(video_list, title, start_url, page)
             # 将线程加入线程池
-            threadpool.append(th)
         page += 1
 
-    # 开始线程
-    for th in threadpool:
-        th.start()
-    # 等待所有线程运行完毕
-    for th in threadpool:
-        th.join()
 
     # 最后合并视频
     print(title_list)

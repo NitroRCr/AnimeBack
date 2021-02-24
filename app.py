@@ -17,7 +17,6 @@ flask_app = None
 class App:
             
     def __init__(self):
-        self.req_num = 0
         self.hash_buffer = []
         self.IMAGE_TMP_PATH = os.path.join("static", "img", "tmp")
         self.IMAGE_SAVE_PATH = os.path.join("static", "img", "upload")
@@ -28,16 +27,22 @@ class App:
         self.VIDEO_PATH = os.path.join("static", "video")
         self.PRE_URL = ""
         
-        self.state = json.loads(open(self.STATE_PATH).read())
         self.frame_box = FrameBox()
         self.create_flask()
 
-    def get_req_num(self):
-        self.state['requestNum'] += 1;
-        f = open(self.STATE_PATH, "w")
-        f.write(json.dumps(self.state))
+    def get_json(self, path):
+        f = open(path)
+        ret = json.loads(f.read())
         f.close()
-        return self.state['requestNum']
+        return ret
+
+    def get_req_num(self):
+        state = self.get_json(self.STATE_PATH)
+        state['requestNum'] += 1
+        f = open(self.STATE_PATH, "w")
+        f.write(json.dumps(state))
+        f.close()
+        return state['requestNum']
 
     def create_flask(self):
         flask = Flask(__name__, instance_relative_config=True, static_url_path='')
