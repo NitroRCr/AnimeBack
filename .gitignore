@@ -5,7 +5,7 @@
 /static/json/*
 /static/video/*
 /process/image/*
-/download_bilibili/bilibili_video/*
+/download/*
 /sql/frames.db
 
 # IDE
