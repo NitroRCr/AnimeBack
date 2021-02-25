@@ -8,14 +8,7 @@ CREATE TABLE frames
 CREATE TABLE cid
 (
     cid INTEGER NOT NULL PRIMARY KEY,
-    bvid VARCHAR(16) NOT NULL,
-    epid INTEGER NOT NULL,
     name VARCHAR(64) NOT NULL,
-    season_id INTEGER NOT NULL
-);
-
-CREATE TABLE season_id
-(
-    season_id INTEGER PRIMARY KEY,
-    info VARCHAR(512) NOT NULL
+    season_id INTEGER NOT NULL,
+    info VARCHAR(128) NOT NULL
 );

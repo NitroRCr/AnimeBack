@@ -1,8 +1,10 @@
 # static
 /static/*
 !/static/video/
+!/static/json/
+/static/json/*
 /static/video/*
-/download_bilibili/image/*
+/process/image/*
 /download_bilibili/bilibili_video/*
 /sql/frames.db
 
@@ -11,6 +13,7 @@
 
 # conf
 /state.json
+/config.json
 /download_bilibili/*.json
 
 # Byte-compiled / optimized / DLL files

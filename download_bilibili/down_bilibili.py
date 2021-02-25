@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-# !/usr/bin/python
-# time: 2019/07/21--20:12
-__author__ = 'Henry'
-
 
 '''
 项目: B站动漫番剧(bangumi)下载
@@ -17,20 +13,70 @@ API:
 
 import requests
 import time
-import urllib.request
+import urllib
 import re
 from moviepy.editor import *
 import os
 import sys
 import threading
 import json
+from bilibili_api import bangumi
 
 import imageio_ffmpeg
+import subprocess
 
-CURR_PATH = "download_bilibili"
+def get_json(filename):
+    try:
+        f = open(filename)
+    except FileNotFoundError as e:
+        print('json file not found:', filename)
+        print('Maybe you should run `python init_conf.py` first.')
+        raise e
+    try:
+        ret = json.loads(f.read())
+    except json.JSONDecodeError as e:
+        print('json loads failed at', filename)
+        raise e
+    f.close()
+    return ret
 
+DOWNLOAD_PATH = "../download"
+INFO_PATH = os.path.join('..', 'static', 'json', 'info.json')
+SETTING = get_json("setting.json")
+COVER_PATH = os.path.join('..', 'static', 'img', 'cover')
+finish = get_json("finish.json")
 # 访问API地址
-config = json.loads(open(os.path.join(CURR_PATH, "config.json")).read())
+
+failed = get_json("failed.json")
+
+
+
+def set_season(s_info):
+    season_id = s_info['season_id']
+    info = get_json(INFO_PATH)
+    if str(season_id) in info['seasons']: 
+        return
+    season = {
+        "name": s_info['title'],
+        "wikiLink": "https://zh.moegirl.org.cn/" + s_info['title'], # 链接不一定正确，需实测
+        "shortIntro": ""
+    }
+    info["seasons"][season_id] = season
+    f = open(INFO_PATH, 'w')
+    f.write(json.dumps(info, indent=4, separators=(',', ': ')))
+    f.close()
+    download_cover(s_info)
+
+def add_to_failed(epid, cid):
+    curr_failed = {
+        "epid": epid,
+        "cid": cid
+    }
+    if curr_failed not in failed:
+        failed.append(curr_failed)
+        f = open("failed.json", 'w')
+        f.write(json.dumps(failed, indent=4, separators=(',', ': ')))
+        f.close()
 
 def get_play_list(aid, cid, quality):
     url_api = 'https://api.bilibili.com/x/player/playurl?cid={}&avid={}&qn={}'.format(
@@ -38,7 +84,7 @@ def get_play_list(aid, cid, quality):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
         # 登录B站后复制一下cookie中的SESSDATA字段,有效期1个月
-        'Cookie': 'SESSDATA=%s'%config['SESSDATA'],
+        'Cookie': 'SESSDATA=%s'%SETTING['SESSDATA'],
         'Host': 'api.bilibili.com'
     }
     html = requests.get(url_api, headers=headers).json()
@@ -51,7 +97,7 @@ def get_play_list(aid, cid, quality):
     video_list = []
     for i in html['data']['durl']:
         video_list.append(i['url'])
-    print(video_list)
+    print('video list:', video_list)
     return video_list
 
 
@@ -64,31 +110,11 @@ def callbackfunc(blocknum, blocksize, totalsize):
     @totalsize: 远程文件的大小
 '''
 
-
-# 字节bytes转化K\M\G
-def format_size(bytes):
-    try:
-        bytes = float(bytes)
-        kb = bytes / 1024
-    except:
-        print("传入的字节格式不对")
-        return "Error"
-    if kb >= 1024:
-        M = kb / 1024
-        if M >= 1024:
-            G = M / 1024
-            return "%.3fG" % (G)
-        else:
-            return "%.3fM" % (M)
-    else:
-        return "%.3fK" % (kb)
-
-
 #  下载视频
-def down_video(video_list, title, start_url, page):
+def down_video(video_list, title, start_url):
+    down_dir = os.path.join(DOWNLOAD_PATH, title)
     num = 1
-    print('[正在下载第{}话视频,请稍等...]:'.format(page) + title)
-    currentVideoPath = os.path.join(CURR_PATH, 'bilibili_video', title)  # 当前目录作为下载目录
+    print('[正在下载]:' + title)
     for i in video_list:
         opener = urllib.request.build_opener()
         # 请求头
@@ -106,50 +132,18 @@ def down_video(video_list, title, start_url, page):
         ]
         urllib.request.install_opener(opener)
         # 创建文件夹存放下载的视频
-        if not os.path.exists(currentVideoPath):
-            os.makedirs(currentVideoPath)
+        if not os.path.exists(down_dir):
+            os.makedirs(down_dir)
         # 开始下载
         if len(video_list) > 1:
-            urllib.request.urlretrieve(url=i, filename=os.path.join(currentVideoPath, r'{}-{}.flv'.format(title, num)))  # 写成mp4也行  title + '-' + num + '.flv'
+            urllib.request.urlretrieve(url=i, filename=os.path.join(down_dir, 'part-%d.flv'%num))  # 写成mp4也行  title + '-' + num + '.flv'
         else:
-            urllib.request.urlretrieve(url=i, filename=os.path.join(currentVideoPath, r'{}.flv'.format(title)))  # 写成mp4也行  title + '-' + num + '.flv'
+            urllib.request.urlretrieve(url=i, filename=os.path.join(down_dir, 'video.flv'))  # 写成mp4也行  title + '-' + num + '.flv'
         num += 1
 
 
-# 合并视频(20190802新版)
-def combine_video(title_list):
-    video_path = os.path.join(CURR_PATH, 'bilibili_video')  # 下载目录
-    for title in title_list:
-        current_video_path = os.path.join(video_path, title)
-        if not os.path.exists(current_video_path):
-            continue
-        if len(os.listdir(current_video_path)) >= 2:
-            # 视频大于一段才要合并
-            print('[下载完成,正在合并视频...]:' + title)
-            # 定义一个数组
-            L = []
-            # 遍历所有文件
-            for file in sorted(os.listdir(current_video_path), key=lambda x: int(x[x.rindex("-") + 1:x.rindex(".")])):
-                # 如果后缀名为 .mp4/.flv
-                if os.path.splitext(file)[1] == '.flv':
-                    # 拼接成完整路径
-                    filePath = os.path.join(current_video_path, file)
-                    # 载入视频
-                    video = VideoFileClip(filePath)
-                    # 添加到数组
-                    L.append(video)
-            # 拼接视频
-            final_clip = concatenate_videoclips(L)
-            # 生成目标视频文件
-            final_clip.to_videofile(os.path.join(
-                current_video_path, r'{}.mp4'.format(title)), fps=24, remove_temp=False)
-            print('[视频合并完成]' + title)
-        else:
-            # 视频只有一段则直接打印下载完成
-            print('[视频合并完成]:' + title)
-
-
-def download_video(ep_url, quality):
+def download_video(epid, quality):
+    ep_url = 'https://www.bilibili.com/bangumi/play/ep' + str(epid)
     start_time = time.time()
     # 用户输入番剧完整链接地址
     # 1. https://www.bilibili.com/bangumi/play/ep267692 (用带ep链接)
@@ -169,26 +163,13 @@ def download_video(ep_url, quality):
     ep_info = json.loads(ep_info)
     # print('您将要下载的番剧名为:' + ep_info['mediaInfo']['title']) # 字段格式太不统一了
     # y = input('请输入1或2 - 1.只下载当前一集 2.下载此番剧的全集:')
-    y = '1'
     # 1.如果只下载当前ep
-    id_list = []
-    if y == '1':
-        try:
-            id_list.append([ep_info['epInfo']['aid'], ep_info['epInfo']['cid'],
-                            str(ep_info['epInfo']['cid'])])
-        except:
-            id_list.append([ep_info['epInfo']['aid'], ep_info['epInfo']['cid'],
-                            str(ep_info['epInfo']['index'])])
-    # 2.下载此番剧全部ep
-    else:
-        for i in ep_info['epList']:
-            # if i['badge'] == '': # 当badge字段为'会员'时,接口返回404
-            try:
-                id_list.append([i['aid'], i['cid'],
-                                i['titleFormat'] + ' ' + i['longTitle']])
-            except:
-                id_list.append([i['aid'], i['cid'], '第' +
-                                str(i['index']) + '话 ' + i['index_title']])
+    try:
+        item = [ep_info['epInfo']['aid'], ep_info['epInfo']['cid'],
+                            str(ep_info['epInfo']['cid'])]
+    except:
+        item = [ep_info['epInfo']['aid'], ep_info['epInfo']['cid'],
+                            str(ep_info['epInfo']['index'])]
 
     # qn参数就是视频清晰度
     # 可选值：
@@ -202,42 +183,119 @@ def download_video(ep_url, quality):
     # print('请输入您要下载视频的清晰度(1080p60:116;1080p+:112;1080p:80;720p60:74;720p:64;480p:32;360p:16; **注意:1080p+,1080p60,720p60都需要带入大会员的cookie中的SESSDATA才行,普通用户的SESSDATA最多只能下载1080p的视频):')
     # quality = input('请输入116或112或80或74或64或32或16:')
     threadpool = []
-    title_list = []
     page = 1
-    print(id_list)
-    for item in id_list:
-        aid = str(item[0])
-        cid = str(item[1])
-        title = item[2]
-        if os.path.exists(os.path.join(CURR_PATH, 'bilibili_video', cid, 'done')):
-            continue
-        # title = re.sub(r'[\/\\:*?"<>|]', '', title)  # 替换为空的
-        print('[下载番剧标题]:' + title)
-        title_list.append(title)
-        start_url = ep_url
-        video_list = get_play_list(aid, cid, quality)
-        # down_video(video_list, title, start_url, page)
-        # 定义线程
-        if video_list == -1:
-            return -1
-        else:
-            down_video(video_list, title, start_url, page)
-            # 将线程加入线程池
-        page += 1
+    aid = str(item[0])
+    cid = str(item[1])
+    title = item[2]
+    if os.path.exists(os.path.join(DOWNLOAD_PATH, cid, 'done')):
+        return 0
+    # title = re.sub(r'[\/\\:*?"<>|]', '', title)  # 替换为空的
+    print('[下载番剧标题]:' + title)
+    start_url = ep_url
+    video_list = get_play_list(aid, cid, quality)
+    # down_video(video_list, title, start_url, page)
+    # 定义线程
+    if video_list == -1:
+        return -1
+    else:
+        down_video(video_list, title, start_url)
 
-
-    # 最后合并视频
-    print(title_list)
-    combine_video(title_list)
+    if os.path.exists(os.path.join(DOWNLOAD_PATH, cid, 'part-1.flv')):
+        combine_video(cid)
 
     end_time = time.time()  # 结束时间
     print('下载总耗时%.2f秒,约%.2f分钟' %
           (end_time - start_time, int(end_time - start_time) / 60))
 
-    f = open(os.path.join(CURR_PATH, 'bilibili_video', str(id_list[0][1]), 'done'), 'w')
-    f.write('done')
+    f = open(os.path.join(DOWNLOAD_PATH, cid, 'done'), 'w')
     f.close()
     return 0
 
+def combine_video(cid):
+    video_dir = os.path.join(DOWNLOAD_PATH, cid)
+    filelist = open(os.path.join(video_dir, 'filelist.txt'), 'w')
+    num = 1
+    while os.path.exists(os.path.join(video_dir, 'part-%d.flv' % num)):
+        filelist.write(os.path.join(video_dir, 'part-%d.flv' % num) + '\n')
+        num += 1
+    subprocess.run(['ffmpeg', '-f', 'concat', '-i', os.path.join(video_dir, 'filelist.txt'), '-c', 'copy', os.path.join(video_dir, 'video.flv')])
+    num = 1
+    while os.path.exists(os.path.join(video_dir, 'part-%d.flv' % num)):
+        os.remove(os.path.join(video_dir, 'part-%d.flv' % num))
+        num += 1
 
-# 番剧视频下载测试: https://www.bilibili.com/bangumi/play/ep269828
+
+def download_cover(info):
+    season_id = info['season_id']
+    print('download cover:', season_id)
+    if not os.path.exists(COVER_PATH):
+        os.mkdir(COVER_PATH)
+    cover_path = os.path.join(COVER_PATH, str(season_id))
+    if not os.path.exists(cover_path):
+        urllib.request.urlretrieve(info['cover'], cover_path)
+
+
+def get_list():
+    queue = SETTING['queue']
+    ep_list = []
+    for i in queue['season_id']:
+        info = bangumi.get_collective_info(season_id=i[1])
+        set_season(info)
+        episodes = info['episodes']
+        for episode in episodes:
+            if episode['cid'] in finish:
+                continue
+            ep_list.append(Ep(episode['id'], i[0]))
+                
+    for i in queue['epid']:
+        ep = Ep(i[1], i[0])
+        if ep.cid in finish:
+            continue
+        ep_list.append(ep)
+    return ep_list
+
+class Ep(object):
+    def __init__(self, epid, tag):
+        info = bangumi.get_episode_info(epid=epid)
+        self.id = epid
+        self.cid = info['epInfo']['cid']
+        self.name = info['h1Title']
+        self.tag = tag
+        self.season_id = info['mediaInfo']['ssId']
+        self.info = {'bvid': info['epInfo']['bvid'], 'epid': epid}
+
+    def write_info(self):
+        f = open(os.path.join(DOWNLOAD_PATH, str(self.cid), 'info.json'), 'w')
+        f.write(json.dumps({
+            "name": self.name,
+            "seasonId": self.season_id,
+            "info": self.info,
+            "tag": self.tag
+        }))
+        f.close()
+
+def download():
+    ep_list = get_list()
+    for ep in ep_list:
+        print('download:', ep.cid)
+        try:
+            ret = download_video(ep.id, SETTING['quality'])
+        except Exception as e:
+            print(e)
+            add_to_failed(ep.id, ep.cid)
+            continue
+        if ret < 0:
+            add_to_failed(ep.id, ep.cid)
+        else:
+            add_to_finish(ep.cid)
+            ep.write_info()
+
+def add_to_finish(cid):
+    finish = get_json("finish.json")
+    finish.append(cid)
+    f = open("finish.json", 'w')
+    f.write(json.dumps(finish, indent=4, separators=(',', ': ')))
+    f.close()
+
+if __name__ == '__main__':
+    download()

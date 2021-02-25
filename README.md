@@ -8,8 +8,8 @@
 
 安装依赖项：
 
-```
-pip install bilibili_api moviepy imagehash pillow tensorflow keras flask pymilvus
+```bash
+pip install bilibili_api imagehash pillow tensorflow keras flask pymilvus opencv-python
 ```
 
 ### 运行

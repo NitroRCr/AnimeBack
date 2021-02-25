@@ -19,7 +19,6 @@ class FrameBox(object):
         self.sql_conn = None
         self.sql_cursor = None
         self.curr_tag = ""
-        self.curr_cid = ""
         self.curr_tags = []
         self.curr_cids = []
         self.config = self.get_json('config.json')
@@ -52,23 +51,13 @@ class FrameBox(object):
             self.milvus.create_partition(self.COLL_NAME, tag)
             self.curr_tags.append(tag)
 
-    def set_brief(self, brief):
-        cid = brief['cid']
-        self.curr_cid = cid
+    def set_info(self, cid, info):
         if cid not in self.curr_cids:
-            epid = brief['epid']
-            bvid = brief['bvid']
-
-            try:
-                info = bangumi.get_episode_info(epid=epid)
-            except BaseException as e:
-                print('except:', e)
-                return
-
-            name = info['h1Title']
-            season_id = info['mediaInfo']['ssId']
-            command = ('INSERT INTO cid (cid, name, epid, bvid, season_id)'
-                'VALUES (%d, "%s", %d, "%s", %d)'%(cid, name, epid, bvid, season_id))
+            name = info['name']
+            inner_info = info['info']
+            season_id = info['seasonId']
+            command = ('INSERT INTO cid (cid, name, season_id, info)'
+                'VALUES (%d, "%s", %d, "%s")'%(cid, name, season_id, json.dumps(inner_info)))
             try:
                 self.sql_cursor.execute(command)
                 print("add info", command)
@@ -76,6 +65,7 @@ class FrameBox(object):
                 print("Warn: cid repeated")
             self.sql_conn.commit()
             self.curr_cids.append(cid)
+            self.set_tag(info['tag'])
 
     def connect(self):
         self.sql_conn = sqlite3.connect(self.DB_PATH)
@@ -197,9 +187,7 @@ class FrameBox(object):
     def set_bili_url(self, results):
         for i in results:
             if i['epid']:
-                i['bili_url'] = 'https://www.bilibili.com/bangumi/play/ep%d?t=%.1f'%(i['epid'], i['time'])
-            elif i['bvid']:
-                i['bili_url'] = 'https://www.bilibili.com/video/%s?t=%.1f'%(i['bvid'], i['time'])
+                i['bili_url'] = 'https://www.bilibili.com/bangumi/play/ep%d?t=%.1f'%(i['info']['epid'], i['time'])
         return results
 
     def close(self):
