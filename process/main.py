@@ -80,20 +80,21 @@ def update(cid, info, st):  # 从 cid 视频的 st 帧开始
     os.rmdir(os.path.join('image', str(cid)))
 
 def pre_video(cid):  # 视频预处理
-    flv = os.path.join(DOWNLOAD_PATH, str(cid), 'video.flv')
-    video = None
-    if os.path.exists(flv):
-        video = flv
-    mp4 = os.path.join(DOWNLOAD_PATH, str(cid), 'video.mp4')
-    if os.path.exists(mp4):
-        video = mp4
-    if video == None:
-        return -1
+    
     out_path = os.path.join(VIDEO_OUT_PATH, '%d.mp4' % cid)
     pre_done_mark = os.path.join(VIDEO_OUT_PATH, '%d.done' % cid)
     if not os.path.exists(VIDEO_OUT_PATH):
         os.makedirs(VIDEO_OUT_PATH)
     if not os.path.exists(pre_done_mark):
+        flv = os.path.join(DOWNLOAD_PATH, str(cid), 'video.flv')
+        video = None
+        if os.path.exists(flv):
+            video = flv
+        mp4 = os.path.join(DOWNLOAD_PATH, str(cid), 'video.mp4')
+        if os.path.exists(mp4):
+            video = mp4
+        if video == None:
+            return -1
         if os.path.exists(out_path):
             os.remove(out_path)
         subprocess.run("ffmpeg -i %s -vcodec libx264 -acodec aac -b:a 64 -ar 44100 -crf %d -vf scale=-2:%d %s" % (
@@ -110,15 +111,9 @@ def pre_video(cid):  # 视频预处理
             "ffmpeg -i %s -r %d -q:v 2 -f image2 %s" % (video, RATE, pic_path), check=True, shell=True)  # 转化成图片
         ready_mark = open(os.path.join(image_tmp_dir, 'ready'), 'w')
         ready_mark.close()
-    os.remove(os.path.join(DOWNLOAD_PATH, str(cid), 'done'))
     if CONFIG['autoRemove']:
         os.remove(video)
-        os.remove(os.path.join(DOWNLOAD_PATH, str(cid), 'info.json'))
-        os.rmdir(os.path.join(DOWNLOAD_PATH, str(cid)))
-    else:
-        mark = open(os.path.join(DOWNLOAD_PATH, str(cid), 'processed'), 'w')
-        mark.close()
-
+    
     return 0
     
 
@@ -145,7 +140,8 @@ def main():
         update(pre['tags'], pre['brief'], st)
     video_dirs = [cid for cid in os.listdir(DOWNLOAD_PATH) if os.path.isdir(os.path.join(DOWNLOAD_PATH, cid))]
     for cid in video_dirs:
-        if not os.path.exists(os.path.join(DOWNLOAD_PATH, cid, 'done')):
+        down_done_mark = os.path.join(DOWNLOAD_PATH, cid, 'done')
+        if not os.path.exists(down_done_mark):
             continue
         cid = int(cid)
         if cid in finish:
@@ -158,6 +154,10 @@ def main():
         finish_f = open("finish.json", "w")
         finish_f.write(json.dumps(finish, indent=4))  # 放入处理完成列表
         finish_f.close()
+        if CONFIG['autoRemove']:
+            os.remove(down_done_mark)
+            os.remove(os.path.join(DOWNLOAD_PATH, str(cid), 'info.json'))
+            os.rmdir(os.path.join(DOWNLOAD_PATH, str(cid)))
 
 
 
