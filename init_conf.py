@@ -20,7 +20,7 @@ CONF_TEMPLATES = {
         "quality": 64
     },
     "static/json/info.json": {
-        "seasons": {},
+        "seasons": [],
         "frameNum": 0
     },
     "process/config.json": {

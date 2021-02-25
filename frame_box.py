@@ -186,7 +186,7 @@ class FrameBox(object):
 
     def set_bili_url(self, results):
         for i in results:
-            if i['epid']:
+            if 'epid' in i['info']:
                 i['bili_url'] = 'https://www.bilibili.com/bangumi/play/ep%d?t=%.1f'%(i['info']['epid'], i['time'])
         return results
 

@@ -54,14 +54,16 @@ failed = get_json("failed.json")
 def set_season(s_info):
     season_id = s_info['season_id']
     info = get_json(INFO_PATH)
-    if str(season_id) in info['seasons']: 
-        return
+    for i in info['seasons']:
+        if season_id == i['seasonId']:
+            return
     season = {
+        "seasonId": season_id,
         "name": s_info['title'],
         "wikiLink": "https://zh.moegirl.org.cn/" + s_info['title'], # 链接不一定正确，需实测
         "shortIntro": ""
     }
-    info["seasons"][season_id] = season
+    info["seasons"].append(season)
     f = open(INFO_PATH, 'w')
     f.write(json.dumps(info, indent=4, separators=(',', ': ')))
     f.close()
