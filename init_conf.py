@@ -35,6 +35,18 @@ CONF_TEMPLATES = {
     "process/failed.json": [],
     "process/pre.json": {"frame": 0}
 }
+DIRS = [
+    'static',
+    'static/json',
+    'static/img',
+    'static/video',
+    'process/image',
+    'download'
+]
+
+for i in DIRS:
+    if not os.path.exists(i):
+        os.mkdir(i)
 
 for i in CONF_TEMPLATES:
     if not os.path.exists(i):

@@ -53,7 +53,7 @@ def end_task(cid, frame, info):
 
 
 def update(cid, info, st):  # 从 cid 视频的 st 帧开始
-    lst = imagehash.dhash(Image.open(os.path.join("..", "static", "img", "black.jpg")))
+    lst = imagehash.dhash(Image.open("black.jpg"))
     st -= 1
     frame_box.connect()
     frame_box.set_info(cid, info)
