@@ -8,9 +8,9 @@ from milvus import Milvus, IndexType, MetricType, Status
 from extract_cnn_vgg16_keras import VGGNet
 
 class FrameBox(object):
-    def __init__(self, path="sql"):
-        self.DB_PATH = os.path.join(path, "frames.db")
-        self.INIT_SQL_PATH = os.path.join(path, "init.sql")
+    def __init__(self, path="."):
+        self.DB_PATH = os.path.join(path, "sql", "frames.db")
+        self.INIT_SQL_PATH = os.path.join(path, "sql", "init.sql")
         self.BUFFER_MAX_LEN = 100
         self.frame_buffer = []
         self.COLL_NAME = "frames"
@@ -21,7 +21,7 @@ class FrameBox(object):
         self.curr_tag = ""
         self.curr_tags = []
         self.curr_cids = []
-        self.config = self.get_json('config.json')
+        self.config = self.get_json(os.path.join(path, 'config.json'))
 
     def get_json(self, path):
         f = open(path)

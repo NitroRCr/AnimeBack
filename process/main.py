@@ -13,7 +13,7 @@ sys.path.append("..")
 from frame_box import FrameBox
 INFO_PATH = "../static/json/info.json"
 
-frame_box = FrameBox('../sql')
+frame_box = FrameBox('..')
 
 def get_json(filename):
     try:
