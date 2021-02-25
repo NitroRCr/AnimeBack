@@ -13,8 +13,7 @@ sys.path.append("..")
 from frame_box import FrameBox
 INFO_PATH = "../static/json/info.json"
 
-frame_box = FrameBox()
-
+frame_box = FrameBox('../sql')
 
 def get_json(filename):
     try:
@@ -47,7 +46,7 @@ finish = get_json("finish.json")
 def end_task(cid, frame, info):
     f = open("pre.json", "w")
     f.write(json.dumps({"cid": cid, "frame": frame, "info": info},
-                       indent=4, separators=(',', ': ')))
+                       indent=4))
     f.close()
     sys.exit(0)
 
@@ -157,7 +156,7 @@ def main():
             continue
         finish.append(cid)
         finish_f = open("finish.json", "w")
-        finish_f.write(json.dumps(finish, indent=4, separators=(',', ': ')))  # 放入处理完成列表
+        finish_f.write(json.dumps(finish, indent=4))  # 放入处理完成列表
         finish_f.close()
 
 
@@ -166,7 +165,7 @@ def add_to_failed(cid):
     if cid not in failed:
         failed.append(cid)
         f = open("failed.json", 'w')
-        f.write(json.dumps(failed, indent=4, separators=(',', ': ')))
+        f.write(json.dumps(failed, indent=4))
         f.close()
 
 

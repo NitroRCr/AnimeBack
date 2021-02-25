@@ -46,11 +46,12 @@ DIRS = [
 
 for i in DIRS:
     if not os.path.exists(i):
+        print('mkdir', i)
         os.mkdir(i)
 
 for i in CONF_TEMPLATES:
     if not os.path.exists(i):
         print("init", i)
         f = open(i, 'w')
-        f.write(json.dumps(CONF_TEMPLATES[i]))
+        f.write(json.dumps(CONF_TEMPLATES[i], indent=4))
         f.close()

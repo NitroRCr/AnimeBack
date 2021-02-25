@@ -8,9 +8,9 @@ from milvus import Milvus, IndexType, MetricType, Status
 from extract_cnn_vgg16_keras import VGGNet
 
 class FrameBox(object):
-    def __init__(self):
-        self.DB_PATH = os.path.join("sql", "frames.db")
-        self.INIT_SQL_PATH = os.path.join("sql", "init.sql")
+    def __init__(self, path="sql"):
+        self.DB_PATH = os.path.join(path, "frames.db")
+        self.INIT_SQL_PATH = os.path.join(path, "init.sql")
         self.BUFFER_MAX_LEN = 100
         self.frame_buffer = []
         self.COLL_NAME = "frames"

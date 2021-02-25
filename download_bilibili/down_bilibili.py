@@ -65,7 +65,7 @@ def set_season(s_info):
     }
     info["seasons"].append(season)
     f = open(INFO_PATH, 'w')
-    f.write(json.dumps(info, indent=4, separators=(',', ': ')))
+    f.write(json.dumps(info, indent=4))
     f.close()
     download_cover(s_info)
 
@@ -77,7 +77,7 @@ def add_to_failed(epid, cid):
     if curr_failed not in failed:
         failed.append(curr_failed)
         f = open("failed.json", 'w')
-        f.write(json.dumps(failed, indent=4, separators=(',', ': ')))
+        f.write(json.dumps(failed, indent=4))
         f.close()
 
 def get_play_list(aid, cid, quality):
@@ -240,6 +240,7 @@ def download_cover(info):
 def get_list():
     queue = SETTING['queue']
     ep_list = []
+    print('[正在获取信息]')
     for i in queue['season_id']:
         info = bangumi.get_collective_info(season_id=i[1])
         set_season(info)
@@ -296,7 +297,7 @@ def add_to_finish(cid):
     finish = get_json("finish.json")
     finish.append(cid)
     f = open("finish.json", 'w')
-    f.write(json.dumps(finish, indent=4, separators=(',', ': ')))
+    f.write(json.dumps(finish, indent=4))
     f.close()
 
 if __name__ == '__main__':
