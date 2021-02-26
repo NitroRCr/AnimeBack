@@ -56,11 +56,9 @@ class FrameBox(object):
             name = info['name']
             inner_info = info['info']
             season_id = info['seasonId']
-            command = ('INSERT INTO cid (cid, name, season_id, info)'
-                'VALUES (%d, "%s", %d, "%s")'%(cid, name, season_id, json.dumps(inner_info)))
             try:
-                self.sql_cursor.execute(command)
-                print("add info", command)
+                self.sql_cursor.execute('INSERT INTO cid (cid, name, season_id, info)'
+                'VALUES (?, ?, ?, ?)', (cid, name, season_id, json.dumps(inner_info)))
             except sqlite3.IntegrityError as e:
                 print("Warn: cid repeated")
             self.sql_conn.commit()
@@ -153,6 +151,7 @@ class FrameBox(object):
             cid_info = self.sql_cursor.fetchall()[0]
             for j in range(len(keys)):
                 i[keys[j]] = cid_info[j]
+            i['info'] = json.loads(i['info'])
         return results
 
     def search_with_info(self, img_path, tags = None, resultNum = 20):

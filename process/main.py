@@ -72,10 +72,10 @@ def update(cid, info, st):  # 从 cid 视频的 st 帧开始
             time = st / RATE
             frame_box.add_frame(file, {"cid": cid, "time": time})
             print("Add frame %d. sim: %f, time: %.1f." % (st, sim, time))
+            os.remove(file)  # 删除图片
         except KeyboardInterrupt:
             frame_box.close()
             end_task(cid, st, info)
-        os.remove(file)  # 删除图片
     os.remove(os.path.join('image', str(cid), 'ready'))
     os.rmdir(os.path.join('image', str(cid)))
 
@@ -111,8 +111,6 @@ def pre_video(cid):  # 视频预处理
             "ffmpeg -i %s -r %d -q:v 2 -f image2 %s" % (video, RATE, pic_path), check=True, shell=True)  # 转化成图片
         ready_mark = open(os.path.join(image_tmp_dir, 'ready'), 'w')
         ready_mark.close()
-    if CONFIG['autoRemove']:
-        os.remove(video)
     
     return 0
     
@@ -128,16 +126,16 @@ def process_video(cid):
     if pre_video(cid) < 0:
         return -1
     update(cid, info, 1)
+    return 0
 
 def main():
     pre = get_json("pre.json")
 
     if pre['frame'] > 0:
         st = pre['frame']
-        pre['frame'] = 0
         open("pre.json",
              "w").write(json.dumps({'frame': 0}))
-        update(pre['tags'], pre['brief'], st)
+        update(pre['cid'], pre['info'], st)
     video_dirs = [cid for cid in os.listdir(DOWNLOAD_PATH) if os.path.isdir(os.path.join(DOWNLOAD_PATH, cid))]
     for cid in video_dirs:
         down_done_mark = os.path.join(DOWNLOAD_PATH, cid, 'done')
@@ -157,6 +155,12 @@ def main():
         if CONFIG['autoRemove']:
             os.remove(down_done_mark)
             os.remove(os.path.join(DOWNLOAD_PATH, str(cid), 'info.json'))
+            flv = os.path.join(DOWNLOAD_PATH, str(cid), 'video.flv')
+            if os.path.exists(flv):
+                os.remove(flv)
+            mp4 = os.path.join(DOWNLOAD_PATH, str(cid), 'video.mp4')
+            if os.path.exists(mp4):
+                os.remove(mp4)
             os.rmdir(os.path.join(DOWNLOAD_PATH, str(cid)))
 
 
