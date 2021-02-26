@@ -80,21 +80,21 @@ def update(cid, info, st):  # 从 cid 视频的 st 帧开始
     os.rmdir(os.path.join('image', str(cid)))
 
 def pre_video(cid):  # 视频预处理
-    
+    flv = os.path.join(DOWNLOAD_PATH, str(cid), 'video.flv')
+    video = None
+    if os.path.exists(flv):
+        video = flv
+    mp4 = os.path.join(DOWNLOAD_PATH, str(cid), 'video.mp4')
+    if os.path.exists(mp4):
+        video = mp4
+    if video == None:
+        return -1
     out_path = os.path.join(VIDEO_OUT_PATH, '%d.mp4' % cid)
     pre_done_mark = os.path.join(VIDEO_OUT_PATH, '%d.done' % cid)
     if not os.path.exists(VIDEO_OUT_PATH):
         os.makedirs(VIDEO_OUT_PATH)
     if not os.path.exists(pre_done_mark):
-        flv = os.path.join(DOWNLOAD_PATH, str(cid), 'video.flv')
-        video = None
-        if os.path.exists(flv):
-            video = flv
-        mp4 = os.path.join(DOWNLOAD_PATH, str(cid), 'video.mp4')
-        if os.path.exists(mp4):
-            video = mp4
-        if video == None:
-            return -1
+        
         if os.path.exists(out_path):
             os.remove(out_path)
         subprocess.run("ffmpeg -i %s -vcodec libx264 -acodec aac -b:a 64 -ar 44100 -crf %d -vf scale=-2:%d %s" % (
