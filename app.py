@@ -147,6 +147,8 @@ class App:
     def search_pic(self, qid, tags, crop=False):
         origin_path = os.path.join(self.IMAGE_SAVE_PATH, str(qid))
         if crop:
+            if not os.path.exists(self.IMAGE_TMP_PATH):
+                os.mkdir(self.IMAGE_TMP_PATH)
             img_path = os.path.join(self.IMAGE_TMP_PATH, '%d.jpg' % qid)
             self.crop_image(origin_path, img_path)
         else:
