@@ -61,7 +61,7 @@ def set_season(s_info):
         "seasonId": season_id,
         "name": s_info['title'],
         "wikiLink": "https://zh.moegirl.org.cn/" + s_info['title'], # 链接不一定正确，需实测
-        "shortIntro": ""
+        "shortIntro": s_info['evaluate']
     }
     info["seasons"].append(season)
     f = open(INFO_PATH, 'w')

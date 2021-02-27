@@ -11,6 +11,7 @@ from milvus import NotConnectError
 import threading
 sys.path.append("..")
 from frame_box import FrameBox
+import time
 INFO_PATH = "../static/json/info.json"
 
 frame_box = FrameBox('..')
@@ -137,6 +138,7 @@ def main():
              "w").write(json.dumps({'frame': 0}))
         update(pre['cid'], pre['info'], st)
     video_dirs = [cid for cid in os.listdir(DOWNLOAD_PATH) if os.path.isdir(os.path.join(DOWNLOAD_PATH, cid))]
+    t_start = time.time()
     for cid in video_dirs:
         down_done_mark = os.path.join(DOWNLOAD_PATH, cid, 'done')
         if not os.path.exists(down_done_mark):
@@ -162,6 +164,9 @@ def main():
             if os.path.exists(mp4):
                 os.remove(mp4)
             os.rmdir(os.path.join(DOWNLOAD_PATH, str(cid)))
+    t_end = time.time()
+    if t_end - t_start > 60:
+        main()
 
 
 
