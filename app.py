@@ -225,4 +225,5 @@ class App:
         cv2.imwrite(out_path, crop)
 
 app = App()
-
+if __name__ == '__main__':
+    flask_app.run()

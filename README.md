@@ -13,76 +13,43 @@
 安装依赖项：
 
 ```bash
-pip install bilibili_api imagehash pillow tensorflow keras flask pymilvus opencv-python
+$ pip install bilibili_api imagehash pillow tensorflow keras flask pymilvus opencv-python
 ```
 
 ### 运行
 
-初始化配置文件
+- 初始化配置文件
 
 ```bash
-python init_conf.py
+$ python init_conf.py
 ```
 
-安装并启动[milvus](https://milvus.io/cn/)
+- 安装并启动[milvus](https://milvus.io/cn/)
 
-#### 运行下载程序
+- 编辑`config.json`：
 
-- 目前仅支持从B站API下载
+  - ```json
+    {"milvus_host": "127.0.0.1", "milvus_port": 19530}
+    ```
 
-编辑`download_bilibili/setting.json`：
+  - 设置为`milvus`正在运行的地址和端口
 
-```javascript
-{
-    "queue": {
-        "season_id": [
-            [
-                "425",
-                425
-            ]
-        ],
-        "epid": []
-    },
-    "rate": 5,
-    "resolution": 480,
-    "SESSDATA": "",
-    "downloadPath": "../download",
-    "quality": 64
-}
-```
+- [运行下载程序](https://github.com/NitroRCr/SearchAnimeByImage/tree/main/download_bilibili)
+- [运行视频处理/入库程序](https://github.com/NitroRCr/SearchAnimeByImage/tree/main/process)
 
-- `queue`：下载队列
-  - `season_id`：通过`season_id`下载的列表，每个元素的第一项为字符串，指定该season的tag，用于搜索时指定tag。第二项为B站的番剧id
-- `rate`：转为图片时，每秒的采样帧数
-- `resolution`：压缩的分辨率（宽）
-- `SESSDATA`：决定你能下载哪些视频/画质。登录B站后在cookie中查看
-- `quality`：下载画质，可选值：
-  - `116`：`1080P60`（需要大会员）
-  - `112`：`1080P+`（需要大会员）
-  - `80`：`1080P`
-  - `74`：`720P60`（需要大会员）
-  - `64`：`720P`
-  - `32`：`480P`
-  - `16`：`320P`
-- `downloadPath`：下载目录
-
-在`download_bilibili`目录下，运行：
+#### 运行网站后端
 
 ```bash
-python down_bilibili.py
+$ python app.py
 ```
 
-该目录下，`finish.json`将储存已下载的`cid`，`failed.json`储存下载失败的`cid`
+此方法仅供测试。生产环境请参考[Flask部署方式](https://dormousehole.readthedocs.io/en/latest/deploying/index.html)
 
-#### 运行视频处理/入库程序
+下面 的例子使用`gunicorn` 4 worker 进程（ `-w 4` ）来运行 Flask 应用，绑定到 localhost 的 4000 端口（ `-b 127.0.0.1:4000` ）:
 
-编辑`process/config.json`
-
+```bash
+$ gunicorn -w 4 -b 127.0.0.1:4000 app:flask_app
 ```
-
-```
-
-README完善中。。。。。。
 
 ## 技术实现
 

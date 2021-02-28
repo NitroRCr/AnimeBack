@@ -97,7 +97,7 @@ def pre_video(cid):  # 视频预处理
         
         if os.path.exists(out_path):
             os.remove(out_path)
-        subprocess.run("ffmpeg -i %s -vcodec libx264 -acodec aac -b:a 64k -ar 44100 -crf %d -vf scale=-2:%d %s" % (
+        subprocess.run("ffmpeg -i %s -vcodec libx264 -acodec aac -b:a 64k -ar 44100 -crf %d -tune animation -vf scale=-2:%d %s" % (
             video, CRF, RESOLUTION, out_path), check=True, shell=True)  # 压缩视频
         mark_f = open(pre_done_mark, 'w')
         mark_f.close()
