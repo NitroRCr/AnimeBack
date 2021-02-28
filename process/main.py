@@ -137,7 +137,7 @@ def main():
              "w").write(json.dumps({'frame': 0}))
         update(pre['cid'], pre['info'], st)
     video_dirs = [cid for cid in os.listdir(DOWNLOAD_PATH) if os.path.isdir(os.path.join(DOWNLOAD_PATH, cid))]
-    video_dirs = sorted(video_dirs, lambda cid: os.path.getmtime(os.path.join(DOWNLOAD_PATH, cid)))
+    video_dirs = sorted(video_dirs, key=lambda cid: os.path.getmtime(os.path.join(DOWNLOAD_PATH, cid)))
     t_start = time.time()
     for cid in video_dirs:
         down_done_mark = os.path.join(DOWNLOAD_PATH, cid, 'done')
