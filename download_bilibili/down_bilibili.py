@@ -206,7 +206,7 @@ def download_video(epid, quality):
         combine_video(cid)
 
     end_time = time.time()  # 结束时间
-    print('下载总耗时%.2f秒,约%.2f分钟' %
+    print('下载耗时%.2f秒,约%.2f分钟' %
           (end_time - start_time, int(end_time - start_time) / 60))
 
     f = open(os.path.join(DOWNLOAD_PATH, cid, 'done'), 'w')
