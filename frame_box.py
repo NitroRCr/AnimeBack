@@ -58,7 +58,7 @@ class FrameBox(object):
             season_id = info['seasonId']
             try:
                 self.sql_cursor.execute('INSERT INTO cid (cid, name, season_id, info)'
-                'VALUES (?, ?, ?, ?)', (cid, name, season_id, json.dumps(inner_info)))
+                'VALUES (?, ?, ?, ?)', (cid, name, season_id, json.dumps(inner_info, ensure_ascii=False)))
             except sqlite3.IntegrityError as e:
                 print("Warn: cid repeated")
             self.sql_conn.commit()

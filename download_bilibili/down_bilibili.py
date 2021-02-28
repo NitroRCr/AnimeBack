@@ -65,7 +65,7 @@ def set_season(s_info):
     }
     info["seasons"].append(season)
     f = open(INFO_PATH, 'w')
-    f.write(json.dumps(info, indent=4))
+    f.write(json.dumps(info, indent=4, ensure_ascii=False))
     f.close()
     download_cover(s_info)
 

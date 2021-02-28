@@ -1,6 +1,8 @@
 # Search Anime By Image
 
-这是一个动漫场景搜索引擎服务端。可以通过番剧某一刻的截图，反向搜索它出自哪部番，以及出现的确切时间。[网站前端](https://anime.krytro.com)
+以图搜番。这是一个动漫场景搜索引擎服务端。可以通过番剧某一刻的截图，反向搜索它出自哪部番，以及出现的确切时间。[网站前端](https://anime.krytro.com)
+
+与[trace.moe](https://github.com/soruly/trace.moe)相比，由于使用的是`vgg16`模型提取图像特征，此项目或许能够提供鲁棒性更高的搜索服务。缺点是性能开销更大，收录比较慢。目前仍处于测试阶段
 
 ## 部署
 
@@ -26,7 +28,7 @@ python init_conf.py
 
 #### 运行下载程序
 
-- 从B站API下载
+- 目前仅支持从B站API下载
 
 编辑`download_bilibili/setting.json`：
 
@@ -80,6 +82,22 @@ python down_bilibili.py
 
 ```
 
+README完善中。。。。。。
+
 ## 技术实现
 
-- 使用`vgg16`
+- 通过[bilibili](https://www.bilibili.com/)的API，自动下载番剧，并初步保存番剧信息
+
+- 使用[ffmpeg](https://ffmpeg.org/about.html)压缩视频并转为mp4，放到网站静态目录下
+- 使用[ffmpeg](https://ffmpeg.org/about.html)，将视频以一定采样率转为图片，放到临时目录
+- 逐帧读取图片，通过`dhash`算法过滤掉相邻的相似图片，其余的图片用`vgg16`模型提取特征向量，添加到`milvus`。添加的每帧的`id`、`time`、所属`cid`等对应信息存到数据库
+- 搜索时同样提取图像特征向量，用`milvus`搜索，返回`帧id`，再通过数据库查询其他信息
+
+## Thanks · 鸣谢
+
+- 下载、预处理视频的部分参考[以图搜番](https://gitee.com/tuxiaobei/find_video_by_pic#https://github.com/Henryhaohao/Bilibili_video_download)
+
+- 使用了[`keras vgg16`预训练模型](https://keras.io/api/applications/vgg/)提取图像特征
+- 使用了[milvus](https://github.com/milvus-io/milvus/)索引、搜索向量
+- 自动裁剪图像黑边的实现，来源于[trace.moe](https://github.com/soruly/trace.moe)的`crop.py`
+
