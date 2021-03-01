@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 # !/usr/bin/python
+import time
+from frame_box import FrameBox
 from bilibili_api import bangumi
 import imagehash
 from PIL import Image
@@ -10,11 +12,10 @@ import subprocess
 from milvus import NotConnectError
 import threading
 sys.path.append("..")
-from frame_box import FrameBox
-import time
 INFO_PATH = "../static/json/info.json"
 
 frame_box = FrameBox('..')
+
 
 def get_json(filename):
     try:
@@ -32,7 +33,6 @@ def get_json(filename):
     return ret
 
 
-
 CONFIG = get_json("config.json")
 VIDEO_OUT_PATH = CONFIG['videoOutPath']
 DOWNLOAD_PATH = CONFIG['downloadPath']
@@ -42,6 +42,7 @@ RESOLUTION = CONFIG['resolution']
 
 failed = get_json("failed.json")
 finish = get_json("finish.json")
+
 
 def end_task(cid, frame, info):
     f = open("pre.json", "w")
@@ -79,6 +80,7 @@ def update(cid, info, st):  # 从 cid 视频的 st 帧开始
     os.remove(os.path.join('image', str(cid), 'ready'))
     os.rmdir(os.path.join('image', str(cid)))
 
+
 def pre_video(cid):  # 视频预处理
     flv = os.path.join(DOWNLOAD_PATH, str(cid), 'video.flv')
     video = None
@@ -94,7 +96,7 @@ def pre_video(cid):  # 视频预处理
     if not os.path.exists(VIDEO_OUT_PATH):
         os.makedirs(VIDEO_OUT_PATH)
     if not os.path.exists(pre_done_mark):
-        
+
         if os.path.exists(out_path):
             os.remove(out_path)
         subprocess.run("ffmpeg -i %s -vcodec libx264 -acodec aac -b:a 64k -ar 44100 -crf %d -tune animation -vf scale=-2:%d %s" % (
@@ -111,9 +113,19 @@ def pre_video(cid):  # 视频预处理
             "ffmpeg -i %s -r %d -q:v 2 -f image2 %s" % (video, RATE, pic_path), check=True, shell=True)  # 转化成图片
         ready_mark = open(os.path.join(image_tmp_dir, 'ready'), 'w')
         ready_mark.close()
-    
+
     return 0
-    
+
+
+def set_ss_status(ss_id, status):
+    info = get_json(INFO_PATH)
+    info_f = open(INFO_PATH, 'w')
+    for season in info['seasons']:
+        if season['seasonId'] == ss_id:
+            season['status'] = status
+            break
+    info_f.write(json.dumps(info, ensure_ascii=False))
+
 
 def process_video(cid):
     video_dir = os.path.join(DOWNLOAD_PATH, str(cid))
@@ -123,10 +135,15 @@ def process_video(cid):
     if not os.path.exists(info_path):
         return -1
     info = get_json(info_path)
+    if info['title'] == '1':
+        set_ss_status(info['seasonId'], 'processing')
     if pre_video(cid) < 0:
         return -1
     update(cid, info, 1)
+    if not info['hasNext']:
+        set_ss_status(info['seasonId'], 'finished')
     return 0
+
 
 def main():
     pre = get_json("pre.json")
@@ -136,8 +153,10 @@ def main():
         open("pre.json",
              "w").write(json.dumps({'frame': 0}))
         update(pre['cid'], pre['info'], st)
-    video_dirs = [cid for cid in os.listdir(DOWNLOAD_PATH) if os.path.isdir(os.path.join(DOWNLOAD_PATH, cid))]
-    video_dirs = sorted(video_dirs, key=lambda cid: os.path.getmtime(os.path.join(DOWNLOAD_PATH, cid)))
+    video_dirs = [cid for cid in os.listdir(
+        DOWNLOAD_PATH) if os.path.isdir(os.path.join(DOWNLOAD_PATH, cid))]
+    video_dirs = sorted(video_dirs, key=lambda cid: os.path.getmtime(
+        os.path.join(DOWNLOAD_PATH, cid)))
     t_start = time.time()
     for cid in video_dirs:
         down_done_mark = os.path.join(DOWNLOAD_PATH, cid, 'done')
@@ -156,7 +175,7 @@ def main():
         finish_f.close()
         if CONFIG['autoRemove']:
             os.remove(down_done_mark)
-            os.remove(os.path.join(DOWNLOAD_PATH, str(cid), 'info.json'))
+            os.remove(ep_info_path)
             flv = os.path.join(DOWNLOAD_PATH, str(cid), 'video.flv')
             if os.path.exists(flv):
                 os.remove(flv)
@@ -167,7 +186,6 @@ def main():
     t_end = time.time()
     if t_end - t_start > 60:
         main()
-
 
 
 def add_to_failed(cid):

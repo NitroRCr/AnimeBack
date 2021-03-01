@@ -16,6 +16,7 @@
 /config.json
 /download_bilibili/*.json
 /process/*.json
+/test.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

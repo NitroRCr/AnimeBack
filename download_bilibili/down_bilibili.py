@@ -61,7 +61,8 @@ def set_season(s_info):
         "seasonId": season_id,
         "name": s_info['title'],
         "wikiLink": "https://zh.moegirl.org.cn/" + s_info['title'], # 链接不一定正确，需实测
-        "shortIntro": s_info['evaluate']
+        "shortIntro": s_info['evaluate'],
+        "status": "waiting"
     }
     info["seasons"].append(season)
     f = open(INFO_PATH, 'w')
@@ -257,6 +258,18 @@ def get_list():
         ep_list.append(ep)
     return ep_list
 
+def set_ss_status(ss_id, status):
+    info = get_json(INFO_PATH)
+    info_f = open(INFO_PATH, 'w')
+    for season in info['seasons']:
+        if season['seasonId'] == ss_id:
+            if season['status'] != status:
+                season['status'] = status
+                info_f.write(json.dumps(info, ensure_ascii=False))
+                break
+            else:
+                return
+
 class Ep(object):
     def __init__(self, epid, tag):
         info = bangumi.get_episode_info(epid=epid)
@@ -266,6 +279,8 @@ class Ep(object):
         self.tag = tag
         self.season_id = info['mediaInfo']['ssId']
         self.info = {'bvid': info['epInfo']['bvid'], 'epid': epid}
+        self.has_next = info['epInfo']['hasNext']
+        self.title = info['epInfo']['title']
 
     def write_info(self):
         f = open(os.path.join(DOWNLOAD_PATH, str(self.cid), 'info.json'), 'w')
@@ -273,14 +288,18 @@ class Ep(object):
             "name": self.name,
             "seasonId": self.season_id,
             "info": self.info,
-            "tag": self.tag
-        }))
+            "tag": self.tag,
+            "hasNext": self.has_next,
+            "title": self.title
+        }, ensure_ascii=False))
         f.close()
 
 def download():
     ep_list = get_list()
     for ep in ep_list:
         print('download:', ep.cid)
+        if ep.title == '1':
+            set_ss_status(ep.season_id, 'downloading')
         try:
             ret = download_video(ep.id, SETTING['quality'])
         except Exception as e:
@@ -292,6 +311,8 @@ def download():
         else:
             add_to_finish(ep.cid)
             ep.write_info()
+            if not ep.has_next:
+                set_ss_status(ep.season_id, 'downloaded')
 
 def add_to_finish(cid):
     finish = get_json("finish.json")
