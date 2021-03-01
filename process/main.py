@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 # !/usr/bin/python
-import time
-from frame_box import FrameBox
 from bilibili_api import bangumi
 import imagehash
 from PIL import Image
 import os
 import json
-import sys
+import time
 import subprocess
 from milvus import NotConnectError
 import threading
+import sys
 sys.path.append("..")
+from frame_box import FrameBox
 INFO_PATH = "../static/json/info.json"
 
 frame_box = FrameBox('..')
@@ -122,9 +122,12 @@ def set_ss_status(ss_id, status):
     info_f = open(INFO_PATH, 'w')
     for season in info['seasons']:
         if season['seasonId'] == ss_id:
-            season['status'] = status
-            break
-    info_f.write(json.dumps(info, ensure_ascii=False))
+            if season['status'] != status:
+                season['status'] = status
+                info_f.write(json.dumps(info, ensure_ascii=False, indent=4))
+                break
+            else:
+                return
 
 
 def process_video(cid):

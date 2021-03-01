@@ -265,7 +265,7 @@ def set_ss_status(ss_id, status):
         if season['seasonId'] == ss_id:
             if season['status'] != status:
                 season['status'] = status
-                info_f.write(json.dumps(info, ensure_ascii=False))
+                info_f.write(json.dumps(info, ensure_ascii=False, indent=4))
                 break
             else:
                 return
@@ -291,7 +291,7 @@ class Ep(object):
             "tag": self.tag,
             "hasNext": self.has_next,
             "title": self.title
-        }, ensure_ascii=False))
+        }, ensure_ascii=False, indent=4))
         f.close()
 
 def download():
