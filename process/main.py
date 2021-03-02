@@ -138,6 +138,7 @@ def process_video(cid):
     if not os.path.exists(info_path):
         return -1
     info = get_json(info_path)
+    print('process:', info['cid'], info['title'])
     if info['title'] == '1':
         set_ss_status(info['seasonId'], 'processing')
     if pre_video(cid) < 0:
@@ -178,7 +179,7 @@ def main():
         finish_f.close()
         if CONFIG['autoRemove']:
             os.remove(down_done_mark)
-            os.remove(ep_info_path)
+            os.remove(os.path.join(DOWNLOAD_PATH, cid, 'info.json'))
             flv = os.path.join(DOWNLOAD_PATH, str(cid), 'video.flv')
             if os.path.exists(flv):
                 os.remove(flv)

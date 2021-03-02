@@ -258,12 +258,12 @@ def get_list():
         ep_list.append(ep)
     return ep_list
 
-def set_ss_status(ss_id, status):
+def set_ss_status(ss_id, status, unless=None):
     info = get_json(INFO_PATH)
     info_f = open(INFO_PATH, 'w')
     for season in info['seasons']:
         if season['seasonId'] == ss_id:
-            if season['status'] != status:
+            if (season['status'] != status) and (season['status'] != unless):
                 season['status'] = status
                 info_f.write(json.dumps(info, ensure_ascii=False, indent=4))
                 break
@@ -297,7 +297,7 @@ class Ep(object):
 def download():
     ep_list = get_list()
     for ep in ep_list:
-        print('download:', ep.cid)
+        print('download:', ep.cid, ep.title)
         if ep.title == '1':
             set_ss_status(ep.season_id, 'downloading')
         try:
@@ -312,7 +312,7 @@ def download():
             add_to_finish(ep.cid)
             ep.write_info()
             if not ep.has_next:
-                set_ss_status(ep.season_id, 'downloaded')
+                set_ss_status(ep.season_id, 'downloaded', unless='processing')
 
 def add_to_finish(cid):
     finish = get_json("finish.json")
