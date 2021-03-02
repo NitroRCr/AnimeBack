@@ -179,7 +179,7 @@ def main():
         finish_f.close()
         if CONFIG['autoRemove']:
             os.remove(down_done_mark)
-            os.remove(os.path.join(DOWNLOAD_PATH, cid, 'info.json'))
+            os.remove(os.path.join(DOWNLOAD_PATH, str(cid), 'info.json'))
             flv = os.path.join(DOWNLOAD_PATH, str(cid), 'video.flv')
             if os.path.exists(flv):
                 os.remove(flv)
