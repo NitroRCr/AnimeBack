@@ -62,15 +62,17 @@ $ gunicorn -w 4 -b 127.0.0.1:4000 app:flask_app
 
 ## To-do
 
++ [ ] 支持`Xception`预训练模型与`PCA`降维
++ [ ] 训练更符合需求的模型
++ [ ] 实现对op/ed的优化
 + [ ] 支持`mysql`数据库
 + [ ] 自动从[樱花动漫](http://www.yhdm.io/)下载
 + [ ] 开放搜索API
 
 ## Thanks · 鸣谢
 
-- 下载、预处理视频的部分参考[以图搜番](https://gitee.com/tuxiaobei/find_video_by_pic#https://github.com/Henryhaohao/Bilibili_video_download)
-
-- 使用了[`keras vgg16`预训练模型](https://keras.io/api/applications/vgg/)提取图像特征
+- 下载、预处理视频的部分参考[以图搜番](https://gitee.com/tuxiaobei/find_video_by_pic#https://github.com/Henryhaohao/Bilibili_video_download)。部分思路来自[tuxiaobei](https://gitee.com/tuxiaobei)
+- VGG16：[Very Deep Convolutional Networks for Large-Scale Image Recognition](https://arxiv.org/abs/1409.1556)
 - 使用了[milvus](https://github.com/milvus-io/milvus/)索引、搜索向量
 - 自动裁剪图像黑边的实现，来源于[trace.moe](https://github.com/soruly/trace.moe)的`crop.py`
 
