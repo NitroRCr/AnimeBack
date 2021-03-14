@@ -66,8 +66,9 @@ def update(cid, info, st):  # 从 cid 视频的 st 帧开始
                 break
             now = imagehash.dhash(Image.open(file))
             sim = (1 - (now - lst) / len(now.hash) ** 2)
-            if sim >= 0.90:  # 如果与上一帧相似度大于90%，跳过
+            if sim >= 0.85:  # 如果与上一帧相似度大于90%，跳过
                 os.remove(file)
+                
                 continue
             lst = now
             time = st / RATE
@@ -124,10 +125,11 @@ def set_ss_status(ss_id, status):
         if season['seasonId'] == ss_id:
             if season['status'] != status:
                 season['status'] = status
-                info_f.write(json.dumps(info, ensure_ascii=False, indent=4))
                 break
             else:
-                return
+                break
+    info_f.write(json.dumps(info, ensure_ascii=False, indent=4))
+    info_f.close()
 
 
 def process_video(cid):
