@@ -20,14 +20,14 @@ db_episodes = plyvel.DB(
     path.join('db', 'episodes'), create_if_missing=True)
 db_status = plyvel.DB(path.join('db', 'status'),
                       create_if_missing=True)
-if not db_status.get(NUMS_KEY).decode():
+if not db_status.get(NUMS_KEY):
     db_status.put(NUMS_KEY, json.dumps({
         "searchNum": 0,
         "maxSsId": 0,
         "maxEpId": 0,
         "tmpNum": 0
     }).encode())
-if not db_status.get(REFER_KEY).decode():
+if not db_status.get(REFER_KEY):
     db_status.put(REFER_KEY, json.dumps({
         'episode/bilibili': {},
         'season/bilibili': {}
@@ -338,6 +338,8 @@ class Episode(object):
         load_frame_box()
         frame_box.insert(frame_group.frames, self.id, self.data['targetPresets'])
         frame_group.clear_all()
+        os.remove(path.join(self.img_tmp_path), 'ready')
+        os.remove(self.img_tmp_path)
         self.set_data('finishedPresets', self.data['targetPresets'])
         self._print('inserted')
 
@@ -410,12 +412,12 @@ class FrameGroup:
                 frames.append(frame)
                 if len(hash_buffer) > self.BUFFER_MAX_LEN:
                     hash_buffer.pop(0)
+        self.frames = frames
 
     def clear_all(self):
         for frame in self.frames:
             os.remove(frame['file'])
         self.frames = []
-        os.rmdir(self.path)
 
 
 def search(img_path, preset=None, resultNum=None):

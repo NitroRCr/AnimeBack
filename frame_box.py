@@ -23,7 +23,7 @@ presets_info = [
         'enable': True,
         'model': 'Xception',
         'coll_param': {
-            'collection_name': 'Xception_PQ',
+            'collection_name': 'AnimeBack_Xception_PQ',
             'dimension': 1024,
             'index_file_size': 2048,
             'metric_type': MetricType.L2
@@ -41,7 +41,7 @@ presets_info = [
         'enable': True,
         'model': 'Xception',
         'coll_param': {
-            'collection_name': 'Xception_PCA',
+            'collection_name': 'AnimeBack_Xception_PCA',
             'dimension': 512,
             'index_file_size': 1024,
             'metric_type': MetricType.L2
@@ -56,7 +56,7 @@ presets_info = [
 ]
 
 
-def calculate_covariance_matrix(self, X, Y=None):
+def calculate_covariance_matrix(X, Y=None):
     # 计算协方差矩阵
 
     m = X.shape[0]
@@ -65,10 +65,10 @@ def calculate_covariance_matrix(self, X, Y=None):
     return 1 / m * np.matmul(X.T, Y)
 
 
-def transform(self, X, n_components):
+def transform(X, n_components):
     # 设n=X.shape[1]，将n维数据降维成n_component维
 
-    covariance_matrix = self.calculate_covariance_matrix(X)
+    covariance_matrix = calculate_covariance_matrix(X)
 
     # 获取特征值，和特征向量
     eigenvalues, eigenvectors = np.linalg.eig(covariance_matrix)
@@ -86,6 +86,7 @@ class ModelPreset:
         self.name = info['name']
         self.coll_param = info['coll_param']
         self.index_type = info['index_type']
+        self.index_param = info['index_param']
         self.extract_dim = info['extract_dim']
         self.pca_dim = info['coll_param']['dimension']
         self.db_path = info['db_path']
@@ -148,8 +149,6 @@ class FrameBox(object):
             host=self.config['milvus_host'], port=self.config['milvus_port'])
 
         collections = self.milvus.list_collections()[1]
-        if not self.COLL_NAME in collections:
-            self.create_collection()
         self.create_collection()
 
     def close(self):
@@ -167,7 +166,7 @@ class FrameBox(object):
             return
         for preset in self.curr_presets:
             now_id = preset.get_frame_num()
-            vectors = np.zeros((length, preset.extract_dim))
+            vectors = np.zeros((length, preset.extract_dim), dtype=float)
             ids = []
             wb = preset.db.write_batch()
             for i in range(length):
@@ -180,7 +179,8 @@ class FrameBox(object):
             wb.write()
             preset.set_frame_num(now_id)
             if preset.extract_dim != preset.pca_dim:
-                vectors = transform(vectors, preset.pca_dim)
+                vectors = np.real(transform(vectors, preset.pca_dim))
+            print(vectors[0])
             res = self.milvus.insert(collection_name=preset.coll_name,
                                      ids=ids, records=vectors.tolist())
         self.frame_buffer = []

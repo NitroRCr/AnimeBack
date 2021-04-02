@@ -35,7 +35,8 @@ DIRS = [
     'static/img',
     'static/video',
     'download',
-    'tmp_images'
+    'tmp_images',
+    'db'
 ]
 
 for i in DIRS:
