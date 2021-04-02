@@ -36,13 +36,13 @@ class App:
         f.close()
         return ret
 
-    def get_req_num(self):
+    def get_id(self, key):
         state = self.get_json(self.STATE_PATH)
-        state['requestNum'] += 1
+        state[key] += 1
         f = open(self.STATE_PATH, "w")
         f.write(json.dumps(state))
         f.close()
-        return state['requestNum']
+        return state[key]
 
     def create_flask(self):
         flask = Flask(__name__, instance_relative_config=True, static_url_path='')
@@ -66,7 +66,7 @@ class App:
                         return response
                 else:
                     response = {}
-                    qid = self.get_req_num()
+                    qid = self.get_id('resultNum')
                     if "tags" in request.form:
                         try:
                             tags = json.loads(request.form['tags'])
@@ -115,7 +115,7 @@ class App:
             cid = int(request.form['cid'])
             time = float(request.form['time'])
             video = os.path.join(self.VIDEO_PATH, '%d.mp4' % cid)
-            req_id = self.get_req_num()
+            req_id = self.get_id('frameNum')
             if not os.path.exists(self.IMAGE_TMP_PATH):
                 os.mkdir(self.IMAGE_TMP_PATH)
             tmp_img = os.path.join(self.IMAGE_TMP_PATH, '%d.jpg' % req_id)

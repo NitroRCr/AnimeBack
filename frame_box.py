@@ -5,23 +5,116 @@ import time
 import json
 from bilibili_api import bangumi
 from milvus import Milvus, IndexType, MetricType, Status
-from extract_cnn_vgg16_keras import VGGNet
+#from models.vgg16 import VGGNet
+from models.xception import XceptionNet
+#from models.densenet169 import DenseNet
+import numpy as np
+import plyvel
+from os import path
+
+model_classes = {
+    # 'VGG16': VGGNet,
+    'Xception': XceptionNet,
+    # 'DenseNet': DenseNet
+}
+presets_info = [
+    {
+        'name': 'Xception_PQ',
+        'enable': True,
+        'model': 'Xception',
+        'coll_param': {
+            'collection_name': 'Xception_PQ',
+            'dimension': 1024,
+            'index_file_size': 2048,
+            'metric_type': MetricType.L2
+        },
+        'index_type': IndexType.IVF_PQ,
+        'index_param': {
+            "m": 32,
+            "nlist": 2048
+        },
+        'extract_dim': 2048,
+        'db_path': 'db/frames_Xception_PQ',
+    },
+    {
+        'name': 'Xception_PCA',
+        'enable': True,
+        'model': 'Xception',
+        'coll_param': {
+            'collection_name': 'Xception_PCA',
+            'dimension': 512,
+            'index_file_size': 1024,
+            'metric_type': MetricType.L2
+        },
+        'index_type': IndexType.IVF_SQ8,
+        'index_param': {
+            "nlist": 2048
+        },
+        'extract_dim': 2048,
+        'db_path': 'db/frames_Xception_PCA'
+    }
+]
+
+
+def calculate_covariance_matrix(self, X, Y=None):
+    # 计算协方差矩阵
+
+    m = X.shape[0]
+    X = X - np.mean(X, axis=0)
+    Y = X if Y == None else Y - np.mean(Y, axis=0)
+    return 1 / m * np.matmul(X.T, Y)
+
+
+def transform(self, X, n_components):
+    # 设n=X.shape[1]，将n维数据降维成n_component维
+
+    covariance_matrix = self.calculate_covariance_matrix(X)
+
+    # 获取特征值，和特征向量
+    eigenvalues, eigenvectors = np.linalg.eig(covariance_matrix)
+
+    # 对特征向量排序，并取最大的前n_component组
+    idx = np.argsort(eigenvalues[::-1])
+    eigenvectors = eigenvectors[:, idx]
+    eigenvectors = eigenvectors[:, :n_components]
+
+    # 转换
+    return np.matmul(X, eigenvectors)
+
+class ModelPreset:
+    def __init__(self, info):
+        self.name = info['name']
+        self.coll_param = info['coll_param']
+        self.index_type = info['index_type']
+        self.extract_dim = info['extract_dim']
+        self.pca_dim = info['coll_param']['dimension']
+        self.db_path = info['db_path']
+        self.model = info['model']
+        self.coll_name = info['coll_param']['collection_name']
+        self.db = plyvel.DB(self.db_path, create_if_missing=True)
+
+    def get_frame_num(self):
+        num = self.db.get('_num'.encode())
+        if not num:
+            self.set_frame_num(0)
+            return 0
+        return int(num)
+
+    def set_frame_num(self, num):
+        self.db.put('_num'.encode(), str(num).encode())
 
 class FrameBox(object):
+    
+
     def __init__(self, path="."):
-        self.DB_PATH = os.path.join(path, "sql", "frames.db")
-        self.INIT_SQL_PATH = os.path.join(path, "sql", "init.sql")
-        self.BUFFER_MAX_LEN = 100
+        self.BUFFER_MAX_LEN = 10000
         self.frame_buffer = []
-        self.COLL_NAME = "frames"
-        self.model = VGGNet()
         self.milvus = None
-        self.sql_conn = None
-        self.sql_cursor = None
-        self.curr_tag = ""
-        self.curr_tags = []
-        self.curr_cids = []
+        self.curr_presets = []
         self.config = self.get_json(os.path.join(path, 'config.json'))
+        self.presets = [ModelPreset(info)
+                        for info in presets_info if info['enable']]
+        self.models = self.get_models()
 
     def get_json(self, path):
         f = open(path)
@@ -29,66 +122,38 @@ class FrameBox(object):
         f.close()
         return ret
 
+    def get_models(self):
+        models = {}
+        for preset in self.presets:
+            models[preset.model] = model_classes[preset.model]()
+        return models
+
+    def get_feats(self, img_path):
+        feats = {}
+        for key in self.models:
+            feats[key] = self.models[key].extract_feat(img_path)
+        return feats
+
     def create_collection(self):
-        self.milvus.create_collection({
-            'collection_name': self.COLL_NAME,
-            'dimension': 512,
-            'index_file_size': 1024,
-            'metric_type': MetricType.L2
-        })
-        self.milvus.create_index(self.COLL_NAME, IndexType.IVF_SQ8, params = {
-            "nlist": 2048
-        })
-
-    def get_all_cid(self):
-        self.sql_cursor.execute("SELECT cid FROM cid")
-        fetched =self.sql_cursor.fetchall()
-        return [i[0] for i in fetched]
-
-    def set_tag(self, tag):
-        self.curr_tag = tag
-        if (tag != "") and (tag not in self.curr_tags):
-            self.milvus.create_partition(self.COLL_NAME, tag)
-            self.curr_tags.append(tag)
-
-    def set_info(self, cid, info):
-        if cid not in self.curr_cids:
-            name = info['name']
-            inner_info = info['info']
-            season_id = info['seasonId']
-            try:
-                self.sql_cursor.execute('INSERT INTO cid (cid, name, season_id, info)'
-                'VALUES (?, ?, ?, ?)', (cid, name, season_id, json.dumps(inner_info, ensure_ascii=False)))
-            except sqlite3.IntegrityError as e:
-                print("Warn: cid repeated")
-            self.sql_conn.commit()
-            self.curr_cids.append(cid)
-            self.set_tag(info['tag'])
+        collections = self.milvus.list_collections()[1]
+        for preset in self.presets:
+            if preset.coll_name in collections:
+                continue
+            self.milvus.create_collection(preset.coll_param)
+            self.milvus.create_index(
+                preset.coll_name, preset.index_type, params=preset.index_param)
 
     def connect(self):
-        self.sql_conn = sqlite3.connect(self.DB_PATH)
-        self.sql_cursor = self.sql_conn.cursor()
-        self.milvus = Milvus(host=self.config['milvus_host'], port=self.config['milvus_port'])
-        
+        self.milvus = Milvus(
+            host=self.config['milvus_host'], port=self.config['milvus_port'])
+
         collections = self.milvus.list_collections()[1]
         if not self.COLL_NAME in collections:
             self.create_collection()
-
-        parts = self.milvus.list_partitions(self.COLL_NAME)[1]
-        self.curr_tags = [i.tag for i in parts]
-        print("current_tags:", self.curr_tags)
-        try:
-            self.curr_cids = self.get_all_cid()
-        except sqlite3.OperationalError as e:
-            # first run
-            self.init_db()
-            print("table not found, created.")
-            self.curr_cids = self.get_all_cid()
+        self.create_collection()
 
     def close(self):
         self.flush()
-        self.sql_cursor.close()
-        self.sql_conn.close()
         self.milvus.close()
 
     def append_to_buffer(self, feat, brief):
@@ -97,98 +162,65 @@ class FrameBox(object):
         self.frame_buffer.append({"feat": feat, "brief": brief})
 
     def flush(self):
-        if len(self.frame_buffer) == 0:
+        length = len(self.frame_buffer)
+        if length == 0:
             return
-        self.sql_cursor.execute("SELECT max(frame_id) FROM frames")
-        now_id = self.sql_cursor.fetchall()[0][0]
-        if now_id == None:
-            now_id = 0
-        vectors = []
-        ids = []
-        for i in self.frame_buffer:
-            now_id += 1
-            vectors.append(i['feat'])
-            ids.append(now_id)
-            brief = i['brief']
-            self.sql_cursor.execute(
-                'INSERT INTO frames (frame_id, cid, time) VALUES ("%d", %d, %f)'
-                %(now_id, brief['cid'], brief['time'])
-            )
-        if self.curr_tag != "":
-            res = self.milvus.insert(self.COLL_NAME, vectors,
-                partition_tag=self.curr_tag, ids = ids)
-        else:
-            res = self.milvus.insert(collection_name = self.COLL_NAME,
-                ids = ids, records = vectors)
-        print("milvus response:", res)
-        self.sql_conn.commit()
+        for preset in self.curr_presets:
+            now_id = preset.get_frame_num()
+            vectors = np.zeros((length, preset.extract_dim))
+            ids = []
+            wb = preset.db.write_batch()
+            for i in range(length):
+                frame = self.frame_buffer[i]
+                now_id += 1
+                vectors[i] = frame['feat'][preset.model]
+                ids.append(now_id)
+                brief = frame['brief']
+                wb.put(str(now_id).encode(), json.dumps(brief).encode())
+            wb.write()
+            preset.set_frame_num(now_id)
+            if preset.extract_dim != preset.pca_dim:
+                vectors = transform(vectors, preset.pca_dim)
+            res = self.milvus.insert(collection_name=preset.coll_name,
+                                     ids=ids, records=vectors.tolist())
         self.frame_buffer = []
-  
-    def search_img(self, img_path, tags = None, resultNum = 20):
-        print('extract feat')
-        vector = self.model.extract_feat(img_path)
-        print('extract feat done')
+
+    def search_img(self, img_path, preset_name=None, resultNum=20):
+        for i in self.presets:
+            if i.name == preset_name:
+                preset = i
+                break
+        if preset_name == None:
+            preset = self.presets[0]
+        if not preset:
+            raise ValueError('Invalid preset name')
+
+        vector = self.get_feats(img_path)[preset.model]
+        if preset.extract_dim != preset.pca_dim:
+            vector = transform(np.asarray([vector]), preset.pca_dim)
         vector = vector.tolist()
-        results = self.milvus.search(self.COLL_NAME, resultNum, [vector],
-            partition_tags=tags, params={"nprobe": 64}, timeout=15)
-        return [{'frame_id': result.id, 'score': 1 - result.distance/2}
-            for result in results[1][0]]
-
-    def search_frame_id(self, results):
-        table_info = self.sql_cursor.execute('PRAGMA table_info(frames)').fetchall()
-        keys = [i[1] for i in table_info]
+        results = self.milvus.search(preset.coll_name, resultNum, vector, params={
+                                     "nprobe": 64}, timeout=15)
+        results = [{
+            'frame_id': result.id,
+            'score': 1 - result.distance/2,
+            'preset': preset_name
+        } for result in results[1][0]]
         for i in results:
-            self.sql_cursor.execute('SELECT * FROM frames WHERE frame_id=?', (i['frame_id'],))
-            frame = self.sql_cursor.fetchall()[0]
-            for j in range(len(keys)):
-                i[keys[j]] = frame[j]
+            brief = json.loads(preset.db.get(i['frame_id'].encode()))
+            for key in brief:
+                i[key] = brief[key]
         return results
 
-    def search_cid(self, results):
-        table_info = self.sql_cursor.execute('PRAGMA table_info(cid)').fetchall()
-        keys = [i[1] for i in table_info]
-        for i in results:
-            self.sql_cursor.execute('select * from cid where cid=?', (i['cid'],))
-            cid_info = self.sql_cursor.fetchall()[0]
-            for j in range(len(keys)):
-                i[keys[j]] = cid_info[j]
-            i['info'] = json.loads(i['info'])
-        return results
-
-    def search_with_info(self, img_path, tags = None, resultNum = 20):
-        t_0 = time.time()
-        results = self.search_img(img_path, tags, resultNum)
-        t_1 = time.time()
-        results = self.search_frame_id(results)
-        t_2 = time.time()
-        results = self.search_cid(results)
-        t_3 = time.time()
-        results = self.set_bili_url(results)
-        t_4 = time.time()
-        print({
-            1: t_1 - t_0,
-            2: t_2 - t_1,
-            3: t_3 - t_2,
-            4: t_4 - t_3,
-            "all": t_4 - t_0
-        })
-        return results
-
-    def init_db(self):
-        sql_cmd_f = open(self.INIT_SQL_PATH)
-        self.sql_cursor.executescript(sql_cmd_f.read())
-        self.sql_conn.commit()
-        sql_cmd_f.close()
-
-    def add_frame(self, img_path, brief):
-        feat = self.model.extract_feat(img_path).tolist()
-        self.append_to_buffer(feat, brief)
-
-    def set_bili_url(self, results):
-        for i in results:
-            if 'epid' in i['info']:
-                i['bili_url'] = 'https://www.bilibili.com/bangumi/play/ep%d?t=%.1f'%(i['info']['epid'], i['time'])
-        return results
+    def insert(self, frames, epid, preset_names):
+        print('extract feat and insert into milvus')
+        self.curr_presets = [preset for preset in self.presets if preset.name in preset_names]
+        for frame in frames:
+            self.append_to_buffer(self.get_feats(frame['file']), {
+                'epid': epid,
+                'time': frame['time']
+            })
+        self.flush()
 
     def close(self):
         self.flush()

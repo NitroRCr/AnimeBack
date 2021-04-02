@@ -4,19 +4,18 @@
 !/static/json/
 /static/json/*
 /static/video/*
-/process/image/*
 /download/*
-/sql/frames.db
+/db/*
+/tmp_images/
 
 # IDE
 .vscode/
 
+# test
+/test/
+
 # conf
-/state.json
 /config.json
-/download_bilibili/*.json
-/process/*.json
-/test.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

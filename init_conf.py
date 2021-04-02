@@ -1,47 +1,41 @@
 import json
 import os
 CONF_TEMPLATES = {
-    "state.json": {
-        "requestNum": 0
-    },
     "config.json": {
         "milvus_host": "127.0.0.1",
-        "milvus_port": 19530
-    },
-    "download_bilibili/failed.json": [],
-    "download_bilibili/finish.json": [],
-    "download_bilibili/setting.json": {
-        "queue": {
-            "season_id": [],
-            "epid": []
+        "milvus_port": 19530,
+        "downloadDir": "download",
+        "videoOutDir": "static/video",
+        "imgTmpDir": "tmp_images",
+        "downloadBilibili": {
+            "queue": {
+                "seasons": []
+            },
+            "default": {
+                "SESSDATA": "",
+                "quality": 64,
+                "presets": [
+                    "Xception_PCA"
+                ],
+                "tag": "$seasonId"
+            },
         },
-        "SESSDATA": "",
-        "downloadPath": "../download",
-        "quality": 64
-    },
-    "static/json/info.json": {
-        "seasons": [],
-        "frameNum": 0
-    },
-    "process/config.json": {
-        "rate": 5,
-        "crf": 36,
-        "resolution": 480,
-        "videoOutPath": "../static/video",
-        "downloadPath": "../download",
-        "autoRemove": True
-    },
-    "process/finish.json": [],
-    "process/failed.json": [],
-    "process/pre.json": {"frame": 0}
+        "process": {
+            "rate": 5,
+            "crf": 36,
+            "resolution": 480,
+            "removeVideo": True,
+            "filteSimlity": 0.85
+        }
+    }
 }
 DIRS = [
     'static',
     'static/json',
     'static/img',
     'static/video',
-    'process/image',
-    'download'
+    'download',
+    'tmp_images'
 ]
 
 for i in DIRS:
