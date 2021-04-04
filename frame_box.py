@@ -35,6 +35,9 @@ presets_info = [
         },
         'extract_dim': 2048,
         'db_path': 'db/frames_Xception_PQ',
+        'search_param': {
+            'nprobe': 16
+        }
     },
     {
         'name': 'Xception_PCA',
@@ -52,34 +55,11 @@ presets_info = [
         },
         'extract_dim': 2048,
         'db_path': 'db/frames_Xception_PCA'
+        'search_param': {
+            'nprobe': 16
+        }
     }
 ]
-
-
-def calculate_covariance_matrix(X, Y=None):
-    # 计算协方差矩阵
-
-    m = X.shape[0]
-    X = X - np.mean(X, axis=0)
-    Y = X if Y == None else Y - np.mean(Y, axis=0)
-    return 1 / m * np.matmul(X.T, Y)
-
-
-def transform(X, n_components):
-    # 设n=X.shape[1]，将n维数据降维成n_component维
-
-    covariance_matrix = calculate_covariance_matrix(X)
-
-    # 获取特征值，和特征向量
-    eigenvalues, eigenvectors = np.linalg.eig(covariance_matrix)
-
-    # 对特征向量排序，并取最大的前n_component组
-    idx = np.argsort(eigenvalues[::-1])
-    eigenvectors = eigenvectors[:, idx]
-    eigenvectors = eigenvectors[:, :n_components]
-
-    # 转换
-    return np.matmul(X, eigenvectors)
 
 class ModelPreset:
     def __init__(self, info):
@@ -92,6 +72,7 @@ class ModelPreset:
         self.db_path = info['db_path']
         self.model = info['model']
         self.coll_name = info['coll_param']['collection_name']
+        self.search_param = info['search_param']
         self.db = plyvel.DB(self.db_path, create_if_missing=True)
 
     def get_frame_num(self):
@@ -144,6 +125,13 @@ class FrameBox(object):
             self.milvus.create_index(
                 preset.coll_name, preset.index_type, params=preset.index_param)
 
+    # test only !!
+    def delete_preset(self, name):
+        for preset in self.presets:
+            if preset.name == name:
+                self.milvus.drop_collection(preset.coll_name)
+        
+
     def connect(self):
         self.milvus = Milvus(
             host=self.config['milvus_host'], port=self.config['milvus_port'])
@@ -180,7 +168,6 @@ class FrameBox(object):
             preset.set_frame_num(now_id)
             if preset.extract_dim != preset.pca_dim:
                 vectors = np.real(transform(vectors, preset.pca_dim))
-            print(vectors[0])
             res = self.milvus.insert(collection_name=preset.coll_name,
                                      ids=ids, records=vectors.tolist())
         self.frame_buffer = []
@@ -199,8 +186,7 @@ class FrameBox(object):
         if preset.extract_dim != preset.pca_dim:
             vector = transform(np.asarray([vector]), preset.pca_dim)
         vector = vector.tolist()
-        results = self.milvus.search(preset.coll_name, resultNum, vector, params={
-                                     "nprobe": 64}, timeout=15)
+        results = self.milvus.search(preset.coll_name, resultNum, vector, params=preset.search_param, timeout=15)
         results = [{
             'frame_id': result.id,
             'score': 1 - result.distance/2,
