@@ -13,7 +13,7 @@
 安装依赖项：
 
 ```bash
-$ pip install bilibili_api imagehash pillow tensorflow keras flask pymilvus opencv-python
+pip install bilibili_api imagehash pillow tensorflow keras flask pymilvus opencv-python sklearn joblib
 ```
 
 ### 运行
@@ -21,7 +21,7 @@ $ pip install bilibili_api imagehash pillow tensorflow keras flask pymilvus open
 - 初始化配置文件
 
 ```bash
-$ python init_conf.py
+python init_conf.py
 ```
 
 - 安装并启动[milvus](https://milvus.io/cn/)
@@ -40,7 +40,7 @@ $ python init_conf.py
 #### 运行网站后端
 
 ```bash
-$ python app.py
+python app.py
 ```
 
 此方法仅供测试。生产环境请参考[Flask部署方式](https://dormousehole.readthedocs.io/en/latest/deploying/index.html)
@@ -48,7 +48,7 @@ $ python app.py
 下面 的例子使用`gunicorn`， 4 worker 进程（ `-w 4` ）来运行 Flask 应用，绑定到 localhost 的 4000 端口（ `-b 127.0.0.1:4000` ）:
 
 ```bash
-$ gunicorn -w 4 -b 127.0.0.1:4000 app:flask_app
+gunicorn -w 4 -b 127.0.0.1:4000 app:flask_app
 ```
 
 ## 技术实现
@@ -62,12 +62,12 @@ $ gunicorn -w 4 -b 127.0.0.1:4000 app:flask_app
 
 ## To-do
 
-+ [ ] 支持`Xception`预训练模型与`PCA`降维
-+ [ ] 训练更符合需求的模型
-+ [ ] 实现对op/ed的优化
-+ [ ] 支持`mysql`数据库
-+ [ ] 自动从[樱花动漫](http://www.yhdm.io/)下载
-+ [ ] 开放搜索API
+- [ ] 支持`Xception`预训练模型与`PCA`降维
+- [ ] 训练更符合需求的模型
+- [ ] 实现对op/ed的优化
+- [ ] 支持`mysql`数据库
+- [ ] 自动从[樱花动漫](http://www.yhdm.io/)下载
+- [ ] 开放搜索API
 
 ## Thanks · 鸣谢
 
@@ -75,4 +75,3 @@ $ gunicorn -w 4 -b 127.0.0.1:4000 app:flask_app
 - VGG16：[Very Deep Convolutional Networks for Large-Scale Image Recognition](https://arxiv.org/abs/1409.1556)
 - 使用了[milvus](https://github.com/milvus-io/milvus/)索引、搜索向量
 - 自动裁剪图像黑边的实现，来源于[trace.moe](https://github.com/soruly/trace.moe)的`crop.py`
-

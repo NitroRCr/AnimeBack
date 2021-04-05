@@ -11,6 +11,9 @@ from models.xception import XceptionNet
 import numpy as np
 import plyvel
 from os import path
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import scale
+import joblib
 
 model_classes = {
     # 'VGG16': VGGNet,
@@ -24,8 +27,8 @@ presets_info = [
         'model': 'Xception',
         'coll_param': {
             'collection_name': 'AnimeBack_Xception_PQ',
-            'dimension': 1024,
-            'index_file_size': 2048,
+            'dimension': 2048,
+            'index_file_size': 4096,
             'metric_type': MetricType.L2
         },
         'index_type': IndexType.IVF_PQ,
@@ -46,7 +49,7 @@ presets_info = [
         'coll_param': {
             'collection_name': 'AnimeBack_Xception_PCA',
             'dimension': 512,
-            'index_file_size': 1024,
+            'index_file_size': 2048,
             'metric_type': MetricType.L2
         },
         'index_type': IndexType.IVF_SQ8,
@@ -54,12 +57,14 @@ presets_info = [
             "nlist": 2048
         },
         'extract_dim': 2048,
-        'db_path': 'db/frames_Xception_PCA'
+        'db_path': 'db/frames_Xception_PCA',
         'search_param': {
             'nprobe': 16
-        }
+        },
+        'pca_model': 'models/pca_xception_512.m'
     }
 ]
+
 
 class ModelPreset:
     def __init__(self, info):
@@ -74,6 +79,9 @@ class ModelPreset:
         self.coll_name = info['coll_param']['collection_name']
         self.search_param = info['search_param']
         self.db = plyvel.DB(self.db_path, create_if_missing=True)
+        self.pca_enabled = ('pca_model' in info)
+        if self.pca_enabled:
+            self.pca = joblib.load(info['pca_model'])
 
     def get_frame_num(self):
         num = self.db.get('_num'.encode())
@@ -85,8 +93,32 @@ class ModelPreset:
     def set_frame_num(self, num):
         self.db.put('_num'.encode(), str(num).encode())
 
+
+class PCAPreset:
+    def __init__(self, info):
+        self.name = info['name']
+        self.extract_dim = info['extract_dim']
+        self.pca_dim = info['coll_param']['dimension']
+        self.model = model_classes[info['model']]()
+        self.vectors = np.zeros((0, self.extract_dim), dtype=float)
+        self.pca = PCA(n_components=self.pca_dim)
+        self.pca_path = info['pca_model']
+
+    def add_frames(self, frames):
+        vectors = np.zeros((len(frames), self.extract_dim), dtype=float)
+        for i in range(len(frames)):
+            vectors[i] = self.model.extract_feat(frames[i]['file'])
+        print(vectors)
+        vectors = scale(vectors)
+        print(vectors)
+        self.vectors = np.concatenate((self.vectors, vectors))
+
+    def train(self):
+        self.pca.fit(self.vectors)
+        joblib.dump(self.pca, self.pca_path)
+
+
 class FrameBox(object):
-    
 
     def __init__(self, path="."):
         self.BUFFER_MAX_LEN = 10000
@@ -130,7 +162,6 @@ class FrameBox(object):
         for preset in self.presets:
             if preset.name == name:
                 self.milvus.drop_collection(preset.coll_name)
-        
 
     def connect(self):
         self.milvus = Milvus(
@@ -166,8 +197,8 @@ class FrameBox(object):
                 wb.put(str(now_id).encode(), json.dumps(brief).encode())
             wb.write()
             preset.set_frame_num(now_id)
-            if preset.extract_dim != preset.pca_dim:
-                vectors = np.real(transform(vectors, preset.pca_dim))
+            if preset.pca_enabled:
+                preset.pca.transform(scale(vectors), copy=False)
             res = self.milvus.insert(collection_name=preset.coll_name,
                                      ids=ids, records=vectors.tolist())
         self.frame_buffer = []
@@ -177,16 +208,16 @@ class FrameBox(object):
             if i.name == preset_name:
                 preset = i
                 break
-        if preset_name == None:
+        if preset_name == None or preset_name == 'default':
             preset = self.presets[0]
         if not preset:
             raise ValueError('Invalid preset name')
 
         vector = self.get_feats(img_path)[preset.model]
         if preset.extract_dim != preset.pca_dim:
-            vector = transform(np.asarray([vector]), preset.pca_dim)
-        vector = vector.tolist()
-        results = self.milvus.search(preset.coll_name, resultNum, vector, params=preset.search_param, timeout=15)
+            vector = preset.pca.transform(scale(np.array([vector])))
+        results = self.milvus.search(
+            preset.coll_name, resultNum, vector.tolist(), params=preset.search_param, timeout=15)
         results = [{
             'frame_id': result.id,
             'score': 1 - result.distance/2,
@@ -200,7 +231,8 @@ class FrameBox(object):
 
     def insert(self, frames, epid, preset_names):
         print('extract feat and insert into milvus')
-        self.curr_presets = [preset for preset in self.presets if preset.name in preset_names]
+        self.curr_presets = [
+            preset for preset in self.presets if preset.name in preset_names]
         for frame in frames:
             self.append_to_buffer(self.get_feats(frame['file']), {
                 'epid': epid,
@@ -211,3 +243,17 @@ class FrameBox(object):
     def close(self):
         self.flush()
         self.milvus.close()
+
+
+class PCATrainer:
+    def __init__(self):
+        self.presets = [PCAPreset(info)
+                        for info in presets_info if 'pca_model' in info]
+
+    def add_frames(self, frames):
+        for preset in self.presets:
+            preset.add_frames(frames)
+
+    def train(self):
+        for preset in self.presets:
+            preset.train()

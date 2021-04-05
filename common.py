@@ -8,11 +8,14 @@ import re
 import subprocess
 import imagehash
 from PIL import Image
-from frame_box import FrameBox
+from frame_box import FrameBox, PCATrainer
+import random
+import time
 
 NUMS_KEY = b'c_nums'
 REFER_KEY = b'refer'
 frame_box = None
+pca_trainer = None
 
 db_seasons = plyvel.DB(
     path.join('db', 'seasons'), create_if_missing=True)
@@ -65,6 +68,12 @@ def load_frame_box():
         frame_box.connect()
 
 
+def load_trainer():
+    global pca_trainer
+    if not pca_trainer:
+        pca_trainer = PCATrainer()
+
+
 def close_db():
     db_seasons.close()
     db_episodes.close()
@@ -114,15 +123,27 @@ class Season:
                 self.id = str(get_num('maxSsId'))
                 self.data = self.get_data_from_bili(bili_ssid)
                 set_refer('season/bilibili', bili_ssid, self.id)
+            self.data['finishedPresets'] = []
+            self.data['targetPresets'] = settings['presets']
             self.data['isDownloading'] = False
             self.data['isProcessing'] = False
-            self.data['processed'] = False
             self.write_data()
         self.settings = settings
         self.episodes = []
 
     def _print(self, obj):
-        print('[%s]:'%self.id, obj)
+        print('[%s]:' % self.id, obj)
+
+    def log(func):
+        def wrapper(self, *args, **kw):
+            print('[%s]: %s start' % (self.id, func.__name__))
+            start_time = time.time()
+            ret = func(self, *args, **kw)
+            end_time = time.time()
+            print('[%s]: %s takes %.2fs.' % (self.id, func.__name__,
+                                             end_time - start_time))
+            return ret
+        return wrapper
 
     def get_data_from_bili(self, season_id):
         info = bangumi.get_collective_info(season_id=season_id)
@@ -137,16 +158,22 @@ class Season:
             "shortIntro": info['evaluate']
         }
 
-    def load_episodes(self):
-        self._print('loading episodes')
+    def set_finished_presets(self):
+        self.read_data()
+        for preset in self.data['targetPpresets']:
+            if preset not in self.data['finishedPresets']:
+                self.data['finishedPresets'].append(preset)
+        self.write_data()
+
+    @log
+    def load_episodes(self, start=None, end=None):
         if self.data['type'] == 'season/bilibili':
             season_id = self.data['info']['ssId']
             info = bangumi.get_collective_info(season_id=season_id)
-            episodes = info['episodes']
+            episodes = info['episodes'][start:end]
             for i in episodes:
                 self.episodes.append(
                     Episode(bili_epid=i['id'], settings=self.settings, season_id=self.id))
-        self._print('loaded')
 
     def add_episode(self, epid):
         episode = Episode(from_id=epid, season_id=self.id,
@@ -165,6 +192,7 @@ class Season:
         self.data[key] = value
         self.write_data()
 
+    @log
     def download(self):
         self._print('downloading')
         self.set_data('isDownloading', True)
@@ -173,14 +201,20 @@ class Season:
         self.set_data('isDownloading', False)
         self._print('downloaded')
 
+    @log
     def process(self):
         self._print('processing')
         self.set_data('isProcessing', True)
         for ep in self.episodes:
             ep.process()
         self.set_data('isProcessing', False)
-        self.set_data('processed', True)
+        self.set_finished_presets()
         self._print('processed')
+
+    @log
+    def train_add(self):
+        for ep in self.episodes:
+            ep.train_add()
 
 
 class Episode(object):
@@ -215,8 +249,19 @@ class Episode(object):
         self.video_out_path = path.join(VIDEO_OUT_DIR, self.id)
         self.img_tmp_path = path.join(IMG_TMP_DIR, self.id)
 
+    def log(func):
+        def wrapper(self, *args, **kw):
+            print('[%s]: %s start' % (self.id, func.__name__))
+            start_time = time.time()
+            ret = func(self, *args, **kw)
+            end_time = time.time()
+            print('[%s]: %s takes %.2fs' % (self.id, func.__name__,
+                                            end_time - start_time))
+            return ret
+        return wrapper
+
     def _print(self, obj):
-        print('[%s>%s]:'%(self.data['seasonId'], self.id), obj)
+        print('[%s>%s]:' % (self.data['seasonId'], self.id), obj)
 
     def get_data_from_bili(self, epid):
         info = bangumi.get_episode_info(epid=epid)
@@ -336,12 +381,23 @@ class Episode(object):
         frame_group = FrameGroup(self.img_tmp_path, PROC_CONF['rate'])
         frame_group.filte_sim(PROC_CONF['filteSimlity'])
         load_frame_box()
-        frame_box.insert(frame_group.frames, self.id, self.data['targetPresets'])
+        insert_presets = []
+        for preset in self.data['targetPresets']:
+            if preset not in self.data['finishedPresets']:
+                insert_presets.append(preset)
+        frame_box.insert(frame_group.frames, self.id, insert_presets)
         frame_group.clear_all()
         os.remove(path.join(self.img_tmp_path), 'ready')
         os.remove(self.img_tmp_path)
-        self.set_data('finishedPresets', self.data['targetPresets'])
+        self.set_finished_presets()
         self._print('inserted')
+
+    def set_finished_presets(self):
+        self.read_data()
+        for preset in self.data['targetPpresets']:
+            if preset not in self.data['finishedPresets']:
+                self.data['finishedPresets'].append(preset)
+        self.write_data()
 
     def process(self):
         self.read_data()
@@ -362,6 +418,18 @@ class Episode(object):
         if config['removeVideo']:
             self.remove_video()
         self._print('processed')
+
+    def add_to_trainer(self):
+        frame_group = FrameGroup(self.img_tmp_path, PROC_CONF['rate'])
+        frame_group.filte_sim(PROC_CONF['filteSimlity'])
+        load_trainer()
+        pca_trainer.add_frames(frame_group.random_select(
+            config['trainPCA']['selectNum']))
+
+    def train_add(self):
+        self.download()
+        self.to_image()
+        self.add_to_trainer()
 
     def remove_video(self):
         os.remove(self.get_downloaded_video())
@@ -419,12 +487,17 @@ class FrameGroup:
             os.remove(frame['file'])
         self.frames = []
 
+    def random_select(self, num):
+        return random.sample(self.frames, num)
 
-def search(img_path, preset=None, resultNum=None):
+
+def search(img_path, preset=None, resultNum=None, tag=None):
     load_frame_box()
     results = frame_box.search_img(img_path, preset, resultNum)
     _set_epinfo(results)
     _set_bili_url(results)
+    if tag:
+        results = _filte_tag(results, tag)
     return results
 
 
@@ -446,3 +519,31 @@ def _set_bili_url(results):
             i['bili_url'] = 'https://www.bilibili.com/bangumi/play/ep%d?t=%.1f' % (
                 i['info']['epid'], i['time'])
     return results
+
+
+def _filte_tag(results, tag):
+    return [i for i in results if i['tag'] == tag]
+
+
+def get_status():
+    seasons = {}
+    for key, value in db_seasons:
+        season_id = key.decode()
+        season = json.loads(value.decode())
+        seasons[season_id] = {
+            'name': season['name'],
+            'type': season['type'],
+            'isDownloading': season['isDownloading'],
+            'isProcessing': season['isProcessing'],
+            'targetPresets': season['targetPresets'],
+            'finishedPresets': season['finishedPresets']
+        }
+    presets = [i.name for i in frame_box.presets]
+    return {
+        'seasons': seasons,
+        'presets': presets
+    }
+
+
+def train_apply():
+    pca_trainer.train()

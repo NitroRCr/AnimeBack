@@ -1,4 +1,4 @@
-from common import Episode, Season, get_json
+from common import Episode, Season, get_json, train_apply
 import os
 import re
 import sys
@@ -17,8 +17,18 @@ def download_bilibili():
             'presets': s['presets'] if 'presets' in s else default['presets'],
             'tag': s['tag'] if 'tag' in s else default['tag'],
         }
+        episodes_str = s['episodes'] if 'episodes' in s else default['episodes']
+        start, end = episodes_str.split(":")
+        if start == '^':
+            start = None
+        else:
+            start = int(start)
+        if end == '$':
+            end = None
+        else:
+            end = int(end)
         season = Season(bili_ssid, settings=settings)
-        season.load_episodes()
+        season.load_episodes(start, end)
         season.download()
 
 def process():
@@ -40,6 +50,13 @@ def process():
             season.add_episode(ep_dirname)
         season.process()
 
+def train_pca():
+    for epid in config['trainPCA']['episodes']:
+        episode = Episode(from_id=str(epid))
+        episode.train_add()
+    train_apply()
+    
+
 def main():
     start_time = time.time()
     if len(sys.argv) <= 1:
@@ -49,6 +66,8 @@ def main():
         download_bilibili()
     elif sys.argv[1] == 'process':
         process()
+    elif sys.argv[1] == 'train-pca':
+        train_pca()
     else:
         print('Invalid arg')
         return

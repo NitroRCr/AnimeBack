@@ -17,7 +17,8 @@ CONF_TEMPLATES = {
                 "presets": [
                     "Xception_PCA"
                 ],
-                "tag": "$seasonId"
+                "tag": "$seasonId",
+                "episodes": "^:$"
             },
         },
         "process": {
@@ -26,6 +27,10 @@ CONF_TEMPLATES = {
             "resolution": 480,
             "removeVideo": True,
             "filteSimlity": 0.85
+        },
+        "trainPCA": {
+            "episodes": [],
+            "selectNum": 256
         }
     }
 }

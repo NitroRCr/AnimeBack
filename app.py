@@ -2,8 +2,12 @@
 import time
 from flask import Flask
 from flask import request, url_for, abort
-from frame_box import FrameBox
-from flask import after_this_request
+#from flask import after_this_request
+from common import (
+    Episode, Season,
+    get_json, get_num, search, frame_box, load_frame_box,
+    get_status
+)
 import init_conf
 import subprocess
 import json
@@ -26,8 +30,7 @@ class App:
         self.RES_SAVE_PATH = os.path.join("static", "json", "response")
         self.VIDEO_PATH = os.path.join("static", "video")
         self.PRE_URL = ""
-        
-        self.frame_box = FrameBox()
+        load_frame_box()
         self.create_flask()
 
     def get_json(self, path):
@@ -35,14 +38,6 @@ class App:
         ret = json.loads(f.read())
         f.close()
         return ret
-
-    def get_id(self, key):
-        state = self.get_json(self.STATE_PATH)
-        state[key] += 1
-        f = open(self.STATE_PATH, "w")
-        f.write(json.dumps(state))
-        f.close()
-        return state[key]
 
     def create_flask(self):
         flask = Flask(__name__, instance_relative_config=True, static_url_path='')
@@ -66,16 +61,9 @@ class App:
                         return response
                 else:
                     response = {}
-                    qid = self.get_id('resultNum')
-                    if "tags" in request.form:
-                        try:
-                            tags = json.loads(request.form['tags'])
-                            if len(tags) == 0:
-                                tags = None
-                        except:
-                            tags = None
-                    else:
-                        tags = None
+                    qid = get_num('searchNum')
+                    tag = request.form['tag'] if 'tag' in request.form else None
+                    preset = request.form['preset'] if 'preset' in request.form else None
                     response['qid'] = qid
                     if request.form['crop'] == 'true':
                         crop = True
@@ -85,7 +73,10 @@ class App:
                         image_file = request.files["pic"]
                         self.save_image(image_file, qid)
                         response['pic_url'] = '/img/upload/%d' % qid
-                        response['result'] = self.search_pic(qid, tags, crop=crop)
+                        try:
+                            response['result'] = self.search_pic(qid, tag=tag, crop=crop, preset=preset)
+                        except ValueError:
+                            abort(400)
                     elif method == "url":
                         matched = re.match(r'((https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|])',
                             request.form['url'])
@@ -110,12 +101,12 @@ class App:
                     self.save_res(response)
             return response
 
-        @flask.route('/getframe', methods = ['POST'])
+        @flask.route('/frame', methods = ['POST'])
         def get_frame():
             cid = int(request.form['cid'])
             time = float(request.form['time'])
             video = os.path.join(self.VIDEO_PATH, '%d.mp4' % cid)
-            req_id = self.get_id('frameNum')
+            req_id = get_num('tmpNum')
             if not os.path.exists(self.IMAGE_TMP_PATH):
                 os.mkdir(self.IMAGE_TMP_PATH)
             tmp_img = os.path.join(self.IMAGE_TMP_PATH, '%d.jpg' % req_id)
@@ -144,7 +135,19 @@ class App:
         global flask_app
         flask_app = flask
 
-    def search_pic(self, qid, tags, crop=False):
+    @flask.route('info/status', methods=['GET'])
+    def get_main_status(self):
+        return get_status()
+
+    @flask.route('info/episode/<id>', methods=['GET'])
+    def get_episode(self, id):
+        return Episode(from_id=id).data
+
+    @flask.route('info/season/<id>', methods=['GET'])
+    def get_main_status(self, id):
+        return Season(from_id=id).data
+
+    def search_pic(self, qid, tag, crop=False, preset=None):
         origin_path = os.path.join(self.IMAGE_SAVE_PATH, str(qid))
         if crop:
             if not os.path.exists(self.IMAGE_TMP_PATH):
@@ -153,9 +156,7 @@ class App:
             self.crop_image(origin_path, img_path)
         else:
             img_path = origin_path
-        self.frame_box.connect()
-        ret = self.frame_box.search_with_info(img_path, tags)
-        self.frame_box.close()
+        ret = search(img_path, preset=preset, tag=tag)
         return ret
 
     def get_saved_res(self, qid):
