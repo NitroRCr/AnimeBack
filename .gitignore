@@ -1,12 +1,9 @@
 # static
-/static/*
-!/static/video/
-!/static/json/
-/static/json/*
-/static/video/*
-/download/*
-/db/*
+/static/
+/download/
+/db/
 /tmp_images/
+/pca/
 
 # IDE
 .vscode/

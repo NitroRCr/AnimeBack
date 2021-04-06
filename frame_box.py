@@ -61,7 +61,28 @@ presets_info = [
         'search_param': {
             'nprobe': 16
         },
-        'pca_model': 'models/pca_xception_512.m'
+        'pca_model': 'pca/pca_xception_512.m'
+    },
+    {
+        'name': 'Xception_PCA_256',
+        'enable': False,
+        'model': 'Xception',
+        'coll_param': {
+            'collection_name': 'AnimeBack_Xception_PCA',
+            'dimension': 256,
+            'index_file_size': 2048,
+            'metric_type': MetricType.L2
+        },
+        'index_type': IndexType.IVF_SQ8,
+        'index_param': {
+            "nlist": 2048
+        },
+        'extract_dim': 2048,
+        'db_path': 'db/frames_Xception_PCA_256',
+        'search_param': {
+            'nprobe': 16
+        },
+        'pca_model': 'pca/pca_xception_256.m'
     }
 ]
 
@@ -108,9 +129,7 @@ class PCAPreset:
         vectors = np.zeros((len(frames), self.extract_dim), dtype=float)
         for i in range(len(frames)):
             vectors[i] = self.model.extract_feat(frames[i]['file'])
-        print(vectors)
         vectors = scale(vectors)
-        print(vectors)
         self.vectors = np.concatenate((self.vectors, vectors))
 
     def train(self):

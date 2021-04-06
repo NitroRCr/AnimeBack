@@ -30,7 +30,7 @@ CONF_TEMPLATES = {
         },
         "trainPCA": {
             "episodes": [],
-            "selectNum": 256
+            "selectNum": 512
         }
     }
 }
@@ -41,7 +41,8 @@ DIRS = [
     'static/video',
     'download',
     'tmp_images',
-    'db'
+    'db',
+    'pca'
 ]
 
 for i in DIRS:
