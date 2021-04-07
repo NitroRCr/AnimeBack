@@ -388,14 +388,14 @@ class Episode(object):
         frame_box.insert(frame_group.frames, self.id, insert_presets)
         if PROC_CONF['removeFrame']:
             frame_group.clear_all()
-        os.remove(path.join(self.img_tmp_path), 'ready')
-        os.remove(self.img_tmp_path)
+            os.remove(path.join(self.img_tmp_path, 'ready'))
+            os.remove(self.img_tmp_path)
         self.set_finished_presets()
         self._print('inserted')
 
     def set_finished_presets(self):
         self.read_data()
-        for preset in self.data['targetPpresets']:
+        for preset in self.data['targetPresets']:
             if preset not in self.data['finishedPresets']:
                 self.data['finishedPresets'].append(preset)
         self.write_data()
@@ -416,7 +416,7 @@ class Episode(object):
             raise e
             return
         self.set_data('status', 'finished')
-        if config['removeVideo']:
+        if PROC_CONF['removeVideo']:
             self.remove_video()
         self._print('processed')
 
