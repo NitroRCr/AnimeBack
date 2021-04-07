@@ -386,7 +386,8 @@ class Episode(object):
             if preset not in self.data['finishedPresets']:
                 insert_presets.append(preset)
         frame_box.insert(frame_group.frames, self.id, insert_presets)
-        frame_group.clear_all()
+        if PROC_CONF['removeFrame']:
+            frame_group.clear_all()
         os.remove(path.join(self.img_tmp_path), 'ready')
         os.remove(self.img_tmp_path)
         self.set_finished_presets()
@@ -460,6 +461,7 @@ class FrameGroup:
                 'time': int(matched.group(1))/self.rate,
                 'dhash': imagehash.dhash(Image.open(file_path))
             })
+            frames.sort(key=lambda x: x['time'])
         return frames
 
     def filte_sim(self, rate):
