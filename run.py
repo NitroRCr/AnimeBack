@@ -108,7 +108,7 @@ def process():
             if not os.path.exists(os.path.join(ep_dir, 'done')):
                 continue
             season.add_episode(ep_dirname)
-        season.episodes.sort(key=lambda ep: ep.id)
+        season.episodes.sort(key=lambda ep: int(ep.id))
         season.process()
 
 def train_pca():
@@ -116,6 +116,17 @@ def train_pca():
         episode = Episode(from_id=str(epid))
         episode.train_add()
     train_apply()
+
+def import_info(info):
+    for i in info:
+        if 'episode/' in i['type']:
+            item = Episode(from_id=i['id'])
+        elif 'season/' in i['type']:
+            item = Season(from_id=i['id'])
+        i.pop('id')
+        for key in i:
+            item.data[key] = i[key]
+        item.write_data()
     
 
 def main():
@@ -131,6 +142,8 @@ def main():
         process()
     elif sys.argv[1] == 'train-pca':
         train_pca()
+    elif sys.argv[1] == 'import-info':
+        import_info(get_json(sys.argv[2]))
     else:
         print('Invalid arg')
         return

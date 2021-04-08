@@ -217,7 +217,7 @@ class FrameBox(object):
             wb.write()
             preset.set_frame_num(now_id)
             if preset.pca_enabled:
-                preset.pca.transform(scale(vectors), copy=False)
+                vectors = preset.pca.transform(scale(vectors))
             res = self.milvus.insert(collection_name=preset.coll_name,
                                      ids=ids, records=vectors.tolist())
         self.frame_buffer = []

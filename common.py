@@ -160,7 +160,7 @@ class Season:
 
     def set_finished_presets(self):
         self.read_data()
-        for preset in self.data['targetPpresets']:
+        for preset in self.data['targetPresets']:
             if preset not in self.data['finishedPresets']:
                 self.data['finishedPresets'].append(preset)
         self.write_data()
