@@ -123,20 +123,20 @@ class App:
         def getIndex():
             return flask.send_static_file('index.html')
 
+        @flask.route('info/status', methods=['GET'])
+        def get_main_status(self):
+            return get_status()
+
+        @flask.route('info/episode/<id>', methods=['GET'])
+        def get_episode(self, id):
+            return Episode(from_id=id).data
+
+        @flask.route('info/season/<id>', methods=['GET'])
+        def get_main_status(self, id):
+            return Season(from_id=id).data
+
         global flask_app
         flask_app = flask
-
-    @flask.route('info/status', methods=['GET'])
-    def get_main_status(self):
-        return get_status()
-
-    @flask.route('info/episode/<id>', methods=['GET'])
-    def get_episode(self, id):
-        return Episode(from_id=id).data
-
-    @flask.route('info/season/<id>', methods=['GET'])
-    def get_main_status(self, id):
-        return Season(from_id=id).data
 
     def search_pic(self, qid, tag, crop=False, preset=None):
         origin_path = os.path.join(self.IMAGE_SAVE_PATH, str(qid))
