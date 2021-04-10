@@ -8,7 +8,6 @@ from common import (
     get_json, get_num, search, frame_box, load_frame_box,
     get_status
 )
-import init_conf
 import subprocess
 import json
 import os
@@ -24,7 +23,7 @@ class App:
         self.hash_buffer = []
         self.IMAGE_TMP_PATH = os.path.join("static", "img", "tmp")
         self.IMAGE_SAVE_PATH = os.path.join("static", "img", "upload")
-        self.IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg'}
+        self.IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webm'}
         self.STATE_PATH = "state.json"
         self.CONFIG_PATH = "config.json"
         self.RES_SAVE_PATH = os.path.join("static", "json", "response")
@@ -118,14 +117,6 @@ class App:
                 print(e)
                 abort(400)
             f = open(tmp_img)
-            """ @after_this_request
-            def remove_file(response):
-                try:
-                    os.remove(tmp_img)
-                    f.close()
-                except Exception as error:
-                    flask.logger.error("Error removing or closing downloaded file handle", error)
-                return response """
             return send_file(f, mimetype='image/jpg')
 
         @flask.route('/', methods = ['GET'])

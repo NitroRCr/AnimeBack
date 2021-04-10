@@ -12,7 +12,7 @@ CONF_TEMPLATES = {
         "milvus_host": "127.0.0.1",
         "milvus_port": 19530,
         "downloadDir": "download",
-        "videoOutDir": "static/video",
+        "videoOutDir": os.path.join("static", "video"),
         "imgTmpDir": "tmp_images",
         "downloadBilibili": {
             "queue": {
@@ -44,9 +44,9 @@ CONF_TEMPLATES = {
 }
 DIRS = [
     'static',
-    'static/json',
-    'static/img',
-    'static/video',
+    os.path.join('static', 'json'),
+    os.path.join('static', 'img'),
+    os.path.join('static', 'video'),
     'download',
     'tmp_images',
     'db',
@@ -108,7 +108,7 @@ def process():
             if not os.path.exists(os.path.join(ep_dir, 'done')):
                 continue
             season.add_episode(ep_dirname)
-        season.episodes.sort(key=lambda ep: int(ep.id))
+        season.episodes.sort(key=lambda ep: int(ep.id) if re.match(r'^\d+$', ep.id) else ep.id)
         season.process()
 
 def train_pca():

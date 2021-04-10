@@ -9,7 +9,7 @@ from milvus import Milvus, IndexType, MetricType, Status
 from models.xception import XceptionNet
 #from models.densenet169 import DenseNet
 import numpy as np
-import plyvel
+from ldb import LDB
 from os import path
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import scale
@@ -99,20 +99,20 @@ class ModelPreset:
         self.model = info['model']
         self.coll_name = info['coll_param']['collection_name']
         self.search_param = info['search_param']
-        self.db = plyvel.DB(self.db_path, create_if_missing=True)
+        self.ldb = LDB(self.db_path, create_if_missing=True)
         self.pca_enabled = ('pca_model' in info)
         if self.pca_enabled:
             self.pca = joblib.load(info['pca_model'])
 
     def get_frame_num(self):
-        num = self.db.get('_num'.encode())
+        num = self.ldb.get('_num'.encode())
         if not num:
             self.set_frame_num(0)
             return 0
         return int(num)
 
     def set_frame_num(self, num):
-        self.db.put('_num'.encode(), str(num).encode())
+        self.ldb.put('_num'.encode(), str(num).encode())
 
 
 class PCAPreset:
@@ -206,7 +206,8 @@ class FrameBox(object):
             now_id = preset.get_frame_num()
             vectors = np.zeros((length, preset.extract_dim), dtype=float)
             ids = []
-            wb = preset.db.write_batch()
+            preset.ldb.open()
+            wb = preset.ldb.db.write_batch()
             for i in range(length):
                 frame = self.frame_buffer[i]
                 now_id += 1
@@ -215,6 +216,7 @@ class FrameBox(object):
                 brief = frame['brief']
                 wb.put(str(now_id).encode(), json.dumps(brief).encode())
             wb.write()
+            preset.ldb.close()
             preset.set_frame_num(now_id)
             if preset.pca_enabled:
                 vectors = preset.pca.transform(scale(vectors))
@@ -243,9 +245,11 @@ class FrameBox(object):
             'preset': preset_name
         } for result in results[1][0]]
         for i in results:
-            brief = json.loads(preset.db.get(i['frame_id'].encode()))
+            preset.ldb.open()
+            brief = json.loads(preset.ldb.get(i['frame_id'].encode(), False))
             for key in brief:
                 i[key] = brief[key]
+            preset.ldb.close()
         return results
 
     def insert(self, frames, epid, preset_names):

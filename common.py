@@ -1,7 +1,7 @@
 import json
 from os import path
 import os
-import plyvel
+from ldb import LDB
 from bilibili_api import bangumi
 from download_bilibili import download_bilibili_video
 import re
@@ -17,11 +17,11 @@ REFER_KEY = b'refer'
 frame_box = None
 pca_trainer = None
 
-db_seasons = plyvel.DB(
+db_seasons = LDB(
     path.join('db', 'seasons'), create_if_missing=True)
-db_episodes = plyvel.DB(
+db_episodes = LDB(
     path.join('db', 'episodes'), create_if_missing=True)
-db_status = plyvel.DB(path.join('db', 'status'),
+db_status = LDB(path.join('db', 'status'),
                       create_if_missing=True)
 if not db_status.get(NUMS_KEY):
     db_status.put(NUMS_KEY, json.dumps({
