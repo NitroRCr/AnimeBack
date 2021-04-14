@@ -40,7 +40,30 @@ presets_info = [
         'db_path': 'db/frames_Xception_PQ',
         'search_param': {
             'nprobe': 16
-        }
+        },
+        'ifscale': False
+    },
+    {
+        'name': 'Xception_PCA_scaled',
+        'enable': True,
+        'model': 'Xception',
+        'coll_param': {
+            'collection_name': 'AnimeBack_Xception_PCA_scaled',
+            'dimension': 512,
+            'index_file_size': 2048,
+            'metric_type': MetricType.L2
+        },
+        'index_type': IndexType.IVF_SQ8,
+        'index_param': {
+            "nlist": 2048
+        },
+        'extract_dim': 2048,
+        'db_path': 'db/frames_Xception_PCA_scaled',
+        'search_param': {
+            'nprobe': 16
+        },
+        'pca_model': 'pca/pca_xception_scaled_512.m',
+        'ifscale': True
     },
     {
         'name': 'Xception_PCA',
@@ -61,10 +84,11 @@ presets_info = [
         'search_param': {
             'nprobe': 16
         },
-        'pca_model': 'pca/pca_xception_512.m'
+        'pca_model': 'pca/pca_xception_512.m',
+        'ifscale': False
     },
     {
-        'name': 'Xception_PCA_256',
+        'name': 'Xception_PCA_256_scaled',
         'enable': False,
         'model': 'Xception',
         'coll_param': {
@@ -82,7 +106,8 @@ presets_info = [
         'search_param': {
             'nprobe': 16
         },
-        'pca_model': 'pca/pca_xception_256.m'
+        'pca_model': 'pca/pca_xception_256.m',
+        'ifscale': True
     }
 ]
 
@@ -124,16 +149,19 @@ class PCAPreset:
         self.vectors = np.zeros((0, self.extract_dim), dtype=float)
         self.pca = PCA(n_components=self.pca_dim)
         self.pca_path = info['pca_model']
+        self.ifscale = info['ifscale']
 
     def add_frames(self, frames):
         vectors = np.zeros((len(frames), self.extract_dim), dtype=float)
         for i in range(len(frames)):
             vectors[i] = self.model.extract_feat(frames[i]['file'])
-        vectors = scale(vectors)
         self.vectors = np.concatenate((self.vectors, vectors))
 
     def train(self):
-        self.pca.fit(self.vectors)
+        vectors = self.vectors
+        if self.ifscale:
+            vectors = scale(vectors.as_matrix().astype(float), axis=1)
+        self.pca.fit(vectors)
         joblib.dump(self.pca, self.pca_path)
 
 
@@ -181,6 +209,7 @@ class FrameBox(object):
         for preset in self.presets:
             if preset.name == name:
                 self.milvus.drop_collection(preset.coll_name)
+                preset.ldb.db.destroy()
 
     def connect(self):
         self.milvus = Milvus(
@@ -218,13 +247,16 @@ class FrameBox(object):
             wb.write()
             preset.ldb.close()
             preset.set_frame_num(now_id)
+            if preset.ifscale:
+                vectors = scale(vectors.as_matrix().astype(float), axis=1)
             if preset.pca_enabled:
-                vectors = preset.pca.transform(scale(vectors))
+                vectors = preset.pca.transform(vectors)
             res = self.milvus.insert(collection_name=preset.coll_name,
                                      ids=ids, records=vectors.tolist())
         self.frame_buffer = []
 
-    def search_img(self, img_path, preset_name=None, resultNum=20):
+    def search_img(self, img_path, resultNum, preset_name=None):
+        preset = None
         for i in self.presets:
             if i.name == preset_name:
                 preset = i
@@ -234,11 +266,13 @@ class FrameBox(object):
         if not preset:
             raise ValueError('Invalid preset name')
 
-        vector = self.get_feats(img_path)[preset.model]
-        if preset.extract_dim != preset.pca_dim:
-            vector = preset.pca.transform(scale(np.array([vector])))
+        vectors = np.array([self.get_feats(img_path)[preset.model]])
+        if preset.ifscale:
+            vectors = scale(vectors.as_matrix().astype(float), axis=1)
+        if preset.pca_enabled:
+            vectors = preset.pca.transform(vectors)
         results = self.milvus.search(
-            preset.coll_name, resultNum, vector.tolist(), params=preset.search_param, timeout=15)
+            preset.coll_name, resultNum, vectors.tolist(), params=preset.search_param, timeout=15)
         results = [{
             'frame_id': result.id,
             'score': 1 - result.distance/2,
@@ -246,7 +280,7 @@ class FrameBox(object):
         } for result in results[1][0]]
         for i in results:
             preset.ldb.open()
-            brief = json.loads(preset.ldb.get(i['frame_id'].encode(), False))
+            brief = json.loads(preset.ldb.get(str(i['frame_id']).encode(), False))
             for key in brief:
                 i[key] = brief[key]
             preset.ldb.close()

@@ -11,6 +11,7 @@ from PIL import Image
 from frame_box import FrameBox, PCATrainer
 import random
 import time
+from urllib import request
 
 NUMS_KEY = b'c_nums'
 REFER_KEY = b'refer'
@@ -59,6 +60,7 @@ DOWNLOAD_DIR = config['downloadDir']
 VIDEO_OUT_DIR = config['videoOutDir']
 IMG_TMP_DIR = config['imgTmpDir']
 PROC_CONF = config['process']
+COVER_DIR = config['coverDir']
 
 
 def load_frame_box():
@@ -119,10 +121,10 @@ class Season:
             self.id = get_id('season/bilibili', bili_ssid)
             self.data = json.loads(db_seasons.get(self.id.encode()))
         else:
+            self.id = str(get_num('maxSsId'))
+            self.data = {}
             if bili_ssid:
-                self.id = str(get_num('maxSsId'))
-                self.data = self.get_data_from_bili(bili_ssid)
-                set_refer('season/bilibili', bili_ssid, self.id)
+                self.data = self.set_data_from_bili(bili_ssid)
             self.data['finishedPresets'] = []
             self.data['targetPresets'] = settings['presets']
             self.data['isDownloading'] = False
@@ -130,6 +132,7 @@ class Season:
             self.write_data()
         self.settings = settings
         self.episodes = []
+        self.cover_path = path.join(COVER_DIR, self.id)
 
     def _print(self, obj):
         print('[%s]:' % self.id, obj)
@@ -145,18 +148,21 @@ class Season:
             return ret
         return wrapper
 
-    def get_data_from_bili(self, season_id):
+    def set_data_from_bili(self, season_id):
         info = bangumi.get_collective_info(season_id=season_id)
-        return {
+        self.data = {
             'name': info['title'],
             'type': 'season/bilibili',
             'info': {
-                'ssId': season_id
+                'ssId': season_id,
+                'cover': info['cover']
             },
             # 链接不一定正确，需实测
             "wikiLink": "https://zh.moegirl.org.cn/" + info['title'],
             "shortIntro": info['evaluate']
         }
+        set_refer('season/bilibili', season_id, self.id)
+        request.urlretrieve(info['cover'], self.cover_path)
 
     def set_finished_presets(self):
         self.read_data()
@@ -494,8 +500,9 @@ class FrameGroup:
 
 
 def search(img_path, preset=None, resultNum=None, tag=None):
+    resultNum = resultNum if resultNum else 20 if not tag else 100
     load_frame_box()
-    results = frame_box.search_img(img_path, preset, resultNum)
+    results = frame_box.search_img(img_path, resultNum=resultNum, preset_name=preset)
     _set_epinfo(results)
     _set_bili_url(results)
     if tag:
@@ -511,7 +518,7 @@ def _set_epinfo(results):
         result['info'] = episode.data['info']
         result['title'] = episode.data['title']
         result['seasonId'] = episode.data['seasonId']
-        result['preview_url'] = '/video/%d/video.mp4' % result['epid']
+        result['preview_url'] = '/video/%s/video.mp4' % result['epid']
     return results
 
 
@@ -529,7 +536,8 @@ def _filte_tag(results, tag):
 
 def get_status():
     seasons = {}
-    for key, value in db_seasons:
+    db_seasons.open()
+    for key, value in db_seasons.db:
         season_id = key.decode()
         season = json.loads(value.decode())
         seasons[season_id] = {
@@ -540,6 +548,7 @@ def get_status():
             'targetPresets': season['targetPresets'],
             'finishedPresets': season['finishedPresets']
         }
+    db_seasons.close()
     presets = [i.name for i in frame_box.presets]
     return {
         'seasons': seasons,

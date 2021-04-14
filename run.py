@@ -14,6 +14,7 @@ CONF_TEMPLATES = {
         "downloadDir": "download",
         "videoOutDir": os.path.join("static", "video"),
         "imgTmpDir": "tmp_images",
+        "coverDir": os.path.join("static", "img", "cover"),
         "downloadBilibili": {
             "queue": {
                 "seasons": []

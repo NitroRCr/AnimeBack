@@ -123,16 +123,16 @@ class App:
         def getIndex():
             return flask.send_static_file('index.html')
 
-        @flask.route('info/status', methods=['GET'])
-        def get_main_status(self):
+        @flask.route('/info/status', methods=['GET'])
+        def get_main_status():
             return get_status()
 
-        @flask.route('info/episode/<id>', methods=['GET'])
-        def get_episode(self, id):
+        @flask.route('/info/episode/<id>', methods=['GET'])
+        def get_episode(id):
             return Episode(from_id=id).data
 
-        @flask.route('info/season/<id>', methods=['GET'])
-        def get_main_status(self, id):
+        @flask.route('/info/season/<id>', methods=['GET'])
+        def get_season(id):
             return Season(from_id=id).data
 
         global flask_app
