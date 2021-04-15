@@ -160,7 +160,7 @@ class PCAPreset:
     def train(self):
         vectors = self.vectors
         if self.ifscale:
-            vectors = scale(vectors.as_matrix().astype(float), axis=1)
+            vectors = scale(vectors, axis=1)
         self.pca.fit(vectors)
         joblib.dump(self.pca, self.pca_path)
 
@@ -248,7 +248,7 @@ class FrameBox(object):
             preset.ldb.close()
             preset.set_frame_num(now_id)
             if preset.ifscale:
-                vectors = scale(vectors.as_matrix().astype(float), axis=1)
+                vectors = scale(vectors, axis=1)
             if preset.pca_enabled:
                 vectors = preset.pca.transform(vectors)
             res = self.milvus.insert(collection_name=preset.coll_name,
@@ -265,10 +265,10 @@ class FrameBox(object):
             preset = self.presets[0]
         if not preset:
             raise ValueError('Invalid preset name')
-
-        vectors = np.array([self.get_feats(img_path)[preset.model]])
+        vectors = np.zeros((1, preset.extract_dim), dtype=float)
+        vectors[0] = self.get_feats(img_path)[preset.model]
         if preset.ifscale:
-            vectors = scale(vectors.as_matrix().astype(float), axis=1)
+            vectors = scale(vectors, axis=1)
         if preset.pca_enabled:
             vectors = preset.pca.transform(vectors)
         results = self.milvus.search(
