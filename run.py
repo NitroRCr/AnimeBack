@@ -139,8 +139,14 @@ def main():
         setup()
     elif sys.argv[1] == 'download-bilibili':
         download_bilibili()
+        end_time = time.time()
+        if (end_time - start_time) > 60:
+            restart()
     elif sys.argv[1] == 'process':
         process()
+        end_time = time.time()
+        if (end_time - start_time) > 60:
+            restart()
     elif sys.argv[1] == 'train-pca':
         train_pca()
     elif sys.argv[1] == 'import-info':
@@ -148,11 +154,11 @@ def main():
     else:
         print('Invalid arg')
         return
-    end_time = time.time()
-    if (end_time - start_time) > 60:
-        global config
-        config = get_json('config.json')
-        main()
+
+def restart():
+    global config
+    config = get_json('config.json')
+    main()
 
 if __name__ == '__main__':
     main()

@@ -119,7 +119,7 @@ class Season:
                 raise ValueError('Invalid `from_id`')
         elif bili_ssid and get_id('season/bilibili', bili_ssid):
             self.id = get_id('season/bilibili', bili_ssid)
-            self.data = json.loads(db_seasons.get(self.id.encode()))
+            self.data = json.loads(db_seasons.get(self.id.encode()).decode())
         else:
             self.id = str(get_num('maxSsId'))
             self.data = {}
@@ -132,7 +132,6 @@ class Season:
             self.write_data()
         self.settings = settings
         self.episodes = []
-        self.cover_path = path.join(COVER_DIR, self.id)
 
     def _print(self, obj):
         print('[%s]:' % self.id, obj)
@@ -161,8 +160,8 @@ class Season:
             "wikiLink": "https://zh.moegirl.org.cn/" + info['title'],
             "shortIntro": info['evaluate']
         }
+        request.urlretrieve(info['cover'], path.join(COVER_DIR, self.id))
         set_refer('season/bilibili', season_id, self.id)
-        request.urlretrieve(info['cover'], self.cover_path)
 
     def set_finished_presets(self):
         self.read_data()

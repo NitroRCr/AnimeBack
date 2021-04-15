@@ -106,7 +106,7 @@ presets_info = [
         'search_param': {
             'nprobe': 16
         },
-        'pca_model': 'pca/pca_xception_256.m',
+        'pca_model': 'pca/pca_xception_scaled_256.m',
         'ifscale': True
     }
 ]
