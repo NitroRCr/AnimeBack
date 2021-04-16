@@ -23,7 +23,7 @@ db_seasons = LDB(
 db_episodes = LDB(
     path.join('db', 'episodes'), create_if_missing=True)
 db_status = LDB(path.join('db', 'status'),
-                      create_if_missing=True)
+                create_if_missing=True)
 if not db_status.get(NUMS_KEY):
     db_status.put(NUMS_KEY, json.dumps({
         "searchNum": 0,
@@ -124,7 +124,7 @@ class Season:
             self.id = str(get_num('maxSsId'))
             self.data = {}
             if bili_ssid:
-                self.data = self.set_data_from_bili(bili_ssid)
+                self.set_data_from_bili(bili_ssid)
             self.data['finishedPresets'] = []
             self.data['targetPresets'] = settings['presets']
             self.data['isDownloading'] = False
@@ -239,9 +239,9 @@ class Episode(object):
             if bili_epid:
                 self.id = str(get_num('maxEpId'))
                 self.data = self.get_data_from_bili(bili_epid)
-                set_refer('episode/bilibili', bili_epid, self.id)
                 self.data['quality'] = settings['quality']
                 self.data['SESSDATA'] = settings['SESSDATA']
+                set_refer('episode/bilibili', bili_epid, self.id)
             self.data['tag'] = settings['tag']
             self.data['status'] = 'waiting'
             self.data['finishedPresets'] = []
@@ -301,6 +301,8 @@ class Episode(object):
 
     def need_download(self):
         if path.exists(path.join(self.download_path, 'done')):
+            return False
+        if path.exists(path.join(self.img_tmp_path, 'ready')) and path.exists(path.join(self.video_out_path, 'done')):
             return False
         for preset in self.data['targetPresets']:
             if preset not in self.data['finishedPresets']:
@@ -501,7 +503,8 @@ class FrameGroup:
 def search(img_path, preset=None, resultNum=None, tag=None):
     resultNum = resultNum if resultNum else 20 if not tag else 100
     load_frame_box()
-    results = frame_box.search_img(img_path, resultNum=resultNum, preset_name=preset)
+    results = frame_box.search_img(
+        img_path, resultNum=resultNum, preset_name=preset)
     _set_epinfo(results)
     _set_bili_url(results)
     if tag:
@@ -517,14 +520,14 @@ def _set_epinfo(results):
         result['info'] = episode.data['info']
         result['title'] = episode.data['title']
         result['seasonId'] = episode.data['seasonId']
-        result['preview_url'] = '/video/%s/video.mp4' % result['epid']
+        result['previewUrl'] = '/video/%s/video.mp4' % result['epid']
     return results
 
 
 def _set_bili_url(results):
     for i in results:
         if i['type'] == 'episode/bilibili':
-            i['bili_url'] = 'https://www.bilibili.com/bangumi/play/ep%d?t=%.1f' % (
+            i['biliUrl'] = 'https://www.bilibili.com/bangumi/play/ep%d?t=%.1f' % (
                 i['info']['epid'], i['time'])
     return results
 

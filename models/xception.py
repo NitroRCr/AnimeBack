@@ -3,7 +3,7 @@ from numpy import linalg as LA
 
 from keras.applications.xception import Xception
 from keras.preprocessing import image
-from keras.applications.vgg16 import preprocess_input
+from keras.applications.xception import preprocess_input
 
 class XceptionNet:
     def __init__(self):

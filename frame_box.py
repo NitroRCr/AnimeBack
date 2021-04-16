@@ -92,7 +92,7 @@ presets_info = [
         'enable': False,
         'model': 'Xception',
         'coll_param': {
-            'collection_name': 'AnimeBack_Xception_PCA',
+            'collection_name': 'AnimeBack_Xception_PCA_256',
             'dimension': 256,
             'index_file_size': 2048,
             'metric_type': MetricType.L2
@@ -126,6 +126,7 @@ class ModelPreset:
         self.search_param = info['search_param']
         self.ldb = LDB(self.db_path, create_if_missing=True)
         self.pca_enabled = ('pca_model' in info)
+        self.ifscale = info['ifscale']
         if self.pca_enabled:
             self.pca = joblib.load(info['pca_model'])
 

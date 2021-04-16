@@ -102,9 +102,9 @@ class App:
 
         @flask.route('/frame', methods = ['POST'])
         def get_frame():
-            cid = int(request.form['cid'])
+            epid = request.form['epid']
             time = float(request.form['time'])
-            video = os.path.join(self.VIDEO_PATH, '%d.mp4' % cid)
+            video = os.path.join(self.VIDEO_PATH, epid, 'video.mp4')
             req_id = get_num('tmpNum')
             if not os.path.exists(self.IMAGE_TMP_PATH):
                 os.mkdir(self.IMAGE_TMP_PATH)

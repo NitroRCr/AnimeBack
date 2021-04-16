@@ -3,7 +3,7 @@ from numpy import linalg as LA
 
 from keras.applications.densenet import DenseNet169
 from keras.preprocessing import image
-from keras.applications.vgg16 import preprocess_input
+from keras.applications.densenet import preprocess_input
 
 class DenseNet:
     def __init__(self):

@@ -26,7 +26,8 @@ CONF_TEMPLATES = {
                     "Xception_PCA"
                 ],
                 "tag": "$seasonId",
-                "episodes": "^:$"
+                "episodes": "^:$",
+                "override": False
             },
         },
         "process": {
@@ -47,6 +48,8 @@ DIRS = [
     'static',
     os.path.join('static', 'json'),
     os.path.join('static', 'img'),
+    os.path.join('static', 'img', 'cover'),
+    os.path.join('static', 'img', 'upload'),
     os.path.join('static', 'video'),
     'download',
     'tmp_images',
@@ -54,7 +57,7 @@ DIRS = [
     'pca'
 ]
 
-def setup():
+def init():
     for i in DIRS:
         if not os.path.exists(i):
             print('mkdir', i)
@@ -66,6 +69,8 @@ def setup():
             f = open(i, 'w')
             f.write(json.dumps(CONF_TEMPLATES[i], indent=4))
             f.close()
+
+init()
 
 def download_bilibili():
     queue = config['downloadBilibili']['queue']
@@ -88,7 +93,7 @@ def download_bilibili():
             end = None
         else:
             end = int(end)
-        season = Season(bili_ssid, settings=settings)
+        season = Season(bili_ssid=bili_ssid, settings=settings)
         season.load_episodes(start, end)
         season.download()
 
@@ -135,9 +140,7 @@ def main():
     if len(sys.argv) <= 1:
         print('Must input arg')
         return
-    if sys.argv[1] == 'setup':
-        setup()
-    elif sys.argv[1] == 'download-bilibili':
+    if sys.argv[1] == 'download-bilibili':
         download_bilibili()
         end_time = time.time()
         if (end_time - start_time) > 60:
