@@ -43,3 +43,9 @@ class LDB:
         if with_action:
             self.close()
         return ret
+
+    def destroy(self):
+        plyvel.destroy_db(self.name)
+
+    def repair(self):
+        plyvel.repair_db(self.name)

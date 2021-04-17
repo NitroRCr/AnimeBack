@@ -84,6 +84,7 @@ def download_bilibili():
             'tag': s['tag'] if 'tag' in s else default['tag'],
         }
         episodes_str = s['episodes'] if 'episodes' in s else default['episodes']
+        override = s['override'] if 'override' in s else default['override']
         start, end = episodes_str.split(":")
         if start == '^':
             start = None
@@ -95,6 +96,8 @@ def download_bilibili():
             end = int(end)
         season = Season(bili_ssid=bili_ssid, settings=settings)
         season.load_episodes(start, end)
+        if override:
+            season.update_settings(settings)
         season.download()
 
 def process():
@@ -129,10 +132,7 @@ def import_info(info):
             item = Episode(from_id=i['id'])
         elif 'season/' in i['type']:
             item = Season(from_id=i['id'])
-        i.pop('id')
-        for key in i:
-            item.data[key] = i[key]
-        item.write_data()
+        item.update_data(i)
     
 
 def main():

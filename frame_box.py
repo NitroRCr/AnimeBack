@@ -5,9 +5,10 @@ import time
 import json
 from bilibili_api import bangumi
 from milvus import Milvus, IndexType, MetricType, Status
-#from models.vgg16 import VGGNet
+from models.vgg16 import VGGNet
 from models.xception import XceptionNet
-#from models.densenet169 import DenseNet
+from models.densenet169 import DenseNet
+from models.resnet50 import ResNet50
 import numpy as np
 from ldb import LDB
 from os import path
@@ -16,9 +17,10 @@ from sklearn.preprocessing import scale
 import joblib
 
 model_classes = {
-    # 'VGG16': VGGNet,
+    'VGG16': VGGNet,
     'Xception': XceptionNet,
-    # 'DenseNet': DenseNet
+    'DenseNet': DenseNet,
+    'ResNet50': ResNet50
 }
 presets_info = [
     {
@@ -108,6 +110,69 @@ presets_info = [
         },
         'pca_model': 'pca/pca_xception_scaled_256.m',
         'ifscale': True
+    },
+    {
+        'name': 'VGG16',
+        'enable': False,
+        'model': 'VGG16',
+        'coll_param': {
+            'collection_name': 'AnimeBack_VGG16',
+            'dimension': 512,
+            'index_file_size': 2048,
+            'metric_type': MetricType.L2
+        },
+        'index_type': IndexType.IVF_SQ8,
+        'index_param': {
+            "nlist": 2048
+        },
+        'extract_dim': 512,
+        'db_path': 'db/frames_VGG16',
+        'search_param': {
+            'nprobe': 16
+        },
+        'ifscale': False
+    },
+    {
+        'name': 'DenseNet',
+        'enable': False,
+        'model': 'DenseNet',
+        'coll_param': {
+            'collection_name': 'AnimeBack_DenseNet',
+            'dimension': 2048,
+            'index_file_size': 2048,
+            'metric_type': MetricType.L2
+        },
+        'index_type': IndexType.IVF_SQ8,
+        'index_param': {
+            "nlist": 2048
+        },
+        'extract_dim': 2048,
+        'db_path': 'db/frames_DenseNet',
+        'search_param': {
+            'nprobe': 16
+        },
+        'ifscale': False
+    },
+    {
+        'name': 'ResNet50',
+        'enable': False,
+        'model': 'ResNet50',
+        'coll_param': {
+            'collection_name': 'AnimeBack_ResNet50',
+            'dimension': 2048,
+            'index_file_size': 2048,
+            'metric_type': MetricType.L2
+        },
+        'index_type': IndexType.IVF_SQ8,
+        'index_param': {
+            "nlist": 2048
+        },
+        'extract_dim': 2048,
+        'db_path': 'db/frames_ResNet50',
+        'search_param': {
+            'nprobe': 16
+        },
+        'ifscale': False
     }
 ]
 
@@ -210,7 +275,7 @@ class FrameBox(object):
         for preset in self.presets:
             if preset.name == name:
                 self.milvus.drop_collection(preset.coll_name)
-                preset.ldb.db.destroy()
+                preset.ldb.destroy()
 
     def connect(self):
         self.milvus = Milvus(

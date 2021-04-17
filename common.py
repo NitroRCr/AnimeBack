@@ -221,6 +221,22 @@ class Season:
         for ep in self.episodes:
             ep.train_add()
 
+    def update_data(self, info):
+        self.read_data()
+        for key in info:
+            if key in self.data:
+                self.data[key] = info[key]
+        self.write_data()
+
+    def update_settings(self, settings):
+        self.settings = settings
+        self.read_data()
+        if 'presets' in settings:
+            self.data['targetPresets'] = settings['presets']
+        self.write_data()
+        for ep in self.episodes:
+            ep.update_settings(settings)
+
 
 class Episode(object):
     def __init__(self, bili_epid=None, from_id=None,
@@ -363,7 +379,7 @@ class Episode(object):
             os.makedirs(self.video_out_path)
         if path.exists(out_video):
             os.remove(out_video)
-        subprocess.run("ffmpeg -i %s -vcodec libx264 -acodec aac -b:a 64k -ar 44100 -crf %d -tune animation -vf scale=-2:%d %s"
+        subprocess.run("ffmpeg -i %s -vcodec libx264 -acodec aac -b:a 64k -ar 44100 -crf %d -tune animation -vf scale=-2:%d %s -y"
                        % (video, PROC_CONF['crf'], PROC_CONF['resolution'], out_video), check=True, shell=True)  # 压缩视频
         create_mark(path.join(self.video_out_path, 'done'))
         self._print('compressed')
@@ -444,6 +460,21 @@ class Episode(object):
         os.remove(path.join(self.download_path, 'done'))
         os.rmdir(self.download_path)
 
+    def update_data(self, info):
+        self.read_data()
+        for key in info:
+            if key in self.data:
+                self.data[key] = info[key]
+        self.write_data()
+
+    def update_settings(self, settings):
+        self.read_data()
+        if 'tag' in settings:
+            self.data['tag'] = settings['tag']
+        if 'presets' in settings:
+            self.data['targetPresets'] = settings['presets']
+        self.write_data()
+
 
 class FrameGroup:
     def __init__(self, img_path, rate):
@@ -466,7 +497,7 @@ class FrameGroup:
             frames.append({
                 'file': file_path,
                 'time': int(matched.group(1))/self.rate,
-                'dhash': imagehash.dhash(Image.open(file_path))
+                'phash': imagehash.phash(Image.open(file_path))
             })
             frames.sort(key=lambda x: x['time'])
         return frames
@@ -478,14 +509,14 @@ class FrameGroup:
         for i in range(len(self.frames)):
             frame = self.frames[i]
             has_sim = False
-            for dhash in hash_buffer:
-                if (1 - (frame['dhash'] - dhash) / len(dhash.hash) ** 2) >= rate:
+            for phash in hash_buffer:
+                if (1 - (frame['phash'] - phash) / len(phash.hash) ** 2) >= rate:
                     has_sim = True
                     break
             if has_sim:
                 os.remove(frame['file'])
             else:
-                hash_buffer.append(frame['dhash'])
+                hash_buffer.append(frame['phash'])
                 frames.append(frame)
                 if len(hash_buffer) > self.BUFFER_MAX_LEN:
                     hash_buffer.pop(0)

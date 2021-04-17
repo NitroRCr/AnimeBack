@@ -112,7 +112,7 @@ class App:
             if os.path.exists(video) == False:
                 abort(400)
             try:
-                subprocess.run('ffmpeg -ss %.1f -i %s -f image2 -frames:v 1 %s' % (time, video, tmp_img), shell=True, check=True)
+                subprocess.run('ffmpeg -ss %.1f -i %s -f image2 -frames:v 1 %s -y' % (time, video, tmp_img), shell=True, check=True)
             except subprocess.CalledProcessError as e:
                 print(e)
                 abort(400)
