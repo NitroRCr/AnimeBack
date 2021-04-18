@@ -427,6 +427,8 @@ class Episode(object):
         self.read_data()
         if not self.need_process():
             return
+        if self.need_download():
+            return
         self._print('processing')
         try:
             self.compress()
@@ -456,9 +458,14 @@ class Episode(object):
         self.add_to_trainer()
 
     def remove_video(self):
-        os.remove(self.get_downloaded_video())
-        os.remove(path.join(self.download_path, 'done'))
-        #os.rmdir(self.download_path)
+        if not path.exists(self.download_path):
+            return
+        try:
+            os.remove(self.get_downloaded_video())
+            os.remove(path.join(self.download_path, 'done'))
+            os.rmdir(self.download_path)
+        except Exception as e:
+            print(e)
 
     def update_data(self, info):
         self.read_data()

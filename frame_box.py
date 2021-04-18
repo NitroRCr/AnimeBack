@@ -77,7 +77,7 @@ presets_info = [
         'enable': True,
         'model': 'DenseNet',
         'coll_param': {
-            'collection_name': 'AnimeBack_DenseNet',
+            'collection_name': 'AnimeBack_DenseNet_PCA',
             'dimension': 416,
             'index_file_size': 2048,
             'metric_type': MetricType.L2
