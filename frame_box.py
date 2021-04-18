@@ -6,12 +6,12 @@ import json
 from bilibili_api import bangumi
 from milvus import Milvus, IndexType, MetricType, Status
 from models.vgg16 import VGGNet
-from models.xception import XceptionNet
+#from models.xception import XceptionNet
 from models.densenet169 import DenseNet
 from models.resnet50 import ResNet50
-from models.efficientnet_b4 import EfficientNetB4
-from models.efficientnet_b6 import EfficientNetB6
-from models.resnet50v2 import ResNet50V2
+#from models.efficientnet_b4 import EfficientNetB4
+#from models.efficientnet_b6 import EfficientNetB6
+#from models.resnet50v2 import ResNet50V2
 import numpy as np
 from ldb import LDB
 from os import path
@@ -21,102 +21,14 @@ import joblib
 
 model_classes = {
     'VGG16': VGGNet,
-    'Xception': XceptionNet,
+    #'Xception': XceptionNet,
     'DenseNet': DenseNet,
     'ResNet50': ResNet50,
-    'ResNet50V2': ResNet50V2,
-    'EfficientNetB4': EfficientNetB4,
-    'EfficientNetB6': EfficientNetB6
+    #'ResNet50V2': ResNet50V2,
+    #'EfficientNetB4': EfficientNetB4,
+    #'EfficientNetB6': EfficientNetB6,
 }
 presets_info = [
-    {
-        'name': 'Xception_PQ',
-        'enable': True,
-        'model': 'Xception',
-        'coll_param': {
-            'collection_name': 'AnimeBack_Xception_PQ',
-            'dimension': 2048,
-            'index_file_size': 4096,
-            'metric_type': MetricType.L2
-        },
-        'index_type': IndexType.IVF_PQ,
-        'index_param': {
-            "m": 32,
-            "nlist": 2048
-        },
-        'extract_dim': 2048,
-        'db_path': 'db/frames_Xception_PQ',
-        'search_param': {
-            'nprobe': 16
-        },
-        'ifscale': False
-    },
-    {
-        'name': 'Xception_PCA_scaled',
-        'enable': True,
-        'model': 'Xception',
-        'coll_param': {
-            'collection_name': 'AnimeBack_Xception_PCA_scaled',
-            'dimension': 512,
-            'index_file_size': 2048,
-            'metric_type': MetricType.L2
-        },
-        'index_type': IndexType.IVF_SQ8,
-        'index_param': {
-            "nlist": 2048
-        },
-        'extract_dim': 2048,
-        'db_path': 'db/frames_Xception_PCA_scaled',
-        'search_param': {
-            'nprobe': 16
-        },
-        'pca_model': 'pca/pca_xception_scaled_512.m',
-        'ifscale': True
-    },
-    {
-        'name': 'Xception_PCA',
-        'enable': True,
-        'model': 'Xception',
-        'coll_param': {
-            'collection_name': 'AnimeBack_Xception_PCA',
-            'dimension': 512,
-            'index_file_size': 2048,
-            'metric_type': MetricType.L2
-        },
-        'index_type': IndexType.IVF_SQ8,
-        'index_param': {
-            "nlist": 2048
-        },
-        'extract_dim': 2048,
-        'db_path': 'db/frames_Xception_PCA',
-        'search_param': {
-            'nprobe': 16
-        },
-        'pca_model': 'pca/pca_xception_512.m',
-        'ifscale': False
-    },
-    {
-        'name': 'Xception_PCA_256_scaled',
-        'enable': False,
-        'model': 'Xception',
-        'coll_param': {
-            'collection_name': 'AnimeBack_Xception_PCA_256',
-            'dimension': 256,
-            'index_file_size': 2048,
-            'metric_type': MetricType.L2
-        },
-        'index_type': IndexType.IVF_SQ8,
-        'index_param': {
-            "nlist": 2048
-        },
-        'extract_dim': 2048,
-        'db_path': 'db/frames_Xception_PCA_256',
-        'search_param': {
-            'nprobe': 16
-        },
-        'pca_model': 'pca/pca_xception_scaled_256.m',
-        'ifscale': True
-    },
     {
         'name': 'VGG16',
         'enable': False,
@@ -140,7 +52,7 @@ presets_info = [
     },
     {
         'name': 'DenseNet',
-        'enable': False,
+        'enable': True,
         'model': 'DenseNet',
         'coll_param': {
             'collection_name': 'AnimeBack_DenseNet',
@@ -160,6 +72,29 @@ presets_info = [
         'ifscale': False
     },
     {
+        'name': 'DenseNet_PCA',
+        'enable': True,
+        'model': 'DenseNet',
+        'coll_param': {
+            'collection_name': 'AnimeBack_DenseNet',
+            'dimension': 416,
+            'index_file_size': 2048,
+            'metric_type': MetricType.L2
+        },
+        'index_type': IndexType.IVF_PQ,
+        'index_param': {
+            "nlist": 2048
+        },
+        'extract_dim': 1664,
+        'db_path': 'db/frames_DenseNet',
+        'search_param': {
+            'm': 32,
+            'nprobe': 16
+        },
+        'ifscale': False,
+        'pca_model': 'pca/pca_densenet_416.m'
+    },
+    {
         'name': 'ResNet50',
         'enable': False,
         'model': 'ResNet50',
@@ -175,91 +110,6 @@ presets_info = [
         },
         'extract_dim': 2048,
         'db_path': 'db/frames_ResNet50',
-        'search_param': {
-            'nprobe': 16
-        },
-        'ifscale': False
-    },
-    {
-        'name': 'ResNet50_PCA',
-        'enable': False,
-        'model': 'ResNet50',
-        'coll_param': {
-            'collection_name': 'AnimeBack_ResNet50_PCA',
-            'dimension': 512,
-            'index_file_size': 2048,
-            'metric_type': MetricType.L2
-        },
-        'index_type': IndexType.IVF_SQ8,
-        'index_param': {
-            "nlist": 2048
-        },
-        'extract_dim': 2048,
-        'db_path': 'db/frames_ResNet50_PCA',
-        'search_param': {
-            'nprobe': 16
-        },
-        'ifscale': False,
-        'pca_model': 'pca/resnet50_512.m'
-    },
-    {
-        'name': 'ResNet50V2',
-        'enable': False,
-        'model': 'ResNet50V2',
-        'coll_param': {
-            'collection_name': 'AnimeBack_ResNet50V2',
-            'dimension': 2048,
-            'index_file_size': 2048,
-            'metric_type': MetricType.L2
-        },
-        'index_type': IndexType.IVF_SQ8,
-        'index_param': {
-            "nlist": 2048
-        },
-        'extract_dim': 2048,
-        'db_path': 'db/frames_ResNet50V2',
-        'search_param': {
-            'nprobe': 16
-        },
-        'ifscale': False,
-    },
-    {
-        'name': 'EfficientNetB6',
-        'enable': False,
-        'model': 'EfficientNetB6',
-        'coll_param': {
-            'collection_name': 'AnimeBack_EfficientNetB6',
-            'dimension': 2304,
-            'index_file_size': 2048,
-            'metric_type': MetricType.L2
-        },
-        'index_type': IndexType.IVF_SQ8,
-        'index_param': {
-            "nlist": 2048
-        },
-        'extract_dim': 2304,
-        'db_path': 'db/frames_EfficientNetB6',
-        'search_param': {
-            'nprobe': 16
-        },
-        'ifscale': False
-    },
-    {
-        'name': 'EfficientNetB4',
-        'enable': False,
-        'model': 'EfficientNetB4',
-        'coll_param': {
-            'collection_name': 'AnimeBack_EfficientNetB4',
-            'dimension': 1792,
-            'index_file_size': 2048,
-            'metric_type': MetricType.L2
-        },
-        'index_type': IndexType.IVF_SQ8,
-        'index_param': {
-            "nlist": 2048
-        },
-        'extract_dim': 1792,
-        'db_path': 'db/frames_EfficientNetB4',
         'search_param': {
             'nprobe': 16
         },
@@ -365,8 +215,10 @@ class FrameBox(object):
     def delete_preset(self, name):
         for preset in self.presets:
             if preset.name == name:
-                self.milvus.drop_collection(preset.coll_name)
+                print(self.milvus.drop_collection(preset.coll_name))
                 preset.ldb.destroy()
+                return
+        raise ValueError('Invalid preset name: %s' % name)
 
     def connect(self):
         self.milvus = Milvus(
