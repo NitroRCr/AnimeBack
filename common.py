@@ -268,7 +268,7 @@ class Episode(object):
         self.download_path = path.join(
             DOWNLOAD_DIR, self.data['seasonId'], self.id)
         self.video_out_path = path.join(VIDEO_OUT_DIR, self.id)
-        self.img_tmp_path = path.join(IMG_TMP_DIR, self.id)
+        self.img_tmp_path = path.join(IMG_TMP_DIR, self.data['seasonId'], self.id)
 
     def log(func):
         def wrapper(self, *args, **kw):

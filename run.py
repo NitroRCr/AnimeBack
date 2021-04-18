@@ -101,6 +101,24 @@ def download_bilibili():
         season.download()
 
 def process():
+    for dirname in os.listdir(config['imgTmpDir']):
+        season_dir = os.path.join(config['imgTmpDir'], dirname)
+        if not os.path.isdir(season_dir):
+            continue
+        if not re.match(r'^\d+$', dirname):
+            continue
+        season = Season(from_id=dirname)
+        for ep_dirname in os.listdir(season_dir):
+            ep_dir = os.path.join(season_dir, ep_dirname)
+            if not os.path.isdir(ep_dir):
+                continue
+            if not re.match(r'^\d+$', ep_dirname):
+                continue
+            if not os.path.exists(os.path.join(ep_dir, 'ready')):
+                continue
+            season.add_episode(ep_dirname)
+        season.episodes.sort(key=lambda ep: int(ep.id) if re.match(r'^\d+$', ep.id) else ep.id)
+        season.process()
     for dirname in os.listdir(config['downloadDir']):
         season_dir = os.path.join(config['downloadDir'], dirname)
         if not os.path.isdir(season_dir):

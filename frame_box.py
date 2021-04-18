@@ -60,14 +60,15 @@ presets_info = [
             'index_file_size': 2048,
             'metric_type': MetricType.L2
         },
-        'index_type': IndexType.IVF_SQ8,
+        'index_type': IndexType.IVF_PQ,
         'index_param': {
+            "m": 52,
             "nlist": 2048
         },
         'extract_dim': 1664,
         'db_path': 'db/frames_DenseNet',
         'search_param': {
-            'nprobe': 16
+            'nprobe': 24
         },
         'ifscale': False
     },
@@ -86,9 +87,9 @@ presets_info = [
             "nlist": 2048
         },
         'extract_dim': 1664,
-        'db_path': 'db/frames_DenseNet',
+        'db_path': 'db/frames_DenseNet_PCA',
         'search_param': {
-            'm': 32,
+            'm': 26,
             'nprobe': 16
         },
         'ifscale': False,
