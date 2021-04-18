@@ -9,6 +9,9 @@ from models.vgg16 import VGGNet
 from models.xception import XceptionNet
 from models.densenet169 import DenseNet
 from models.resnet50 import ResNet50
+from models.efficientnet_b4 import EfficientNetB4
+from models.efficientnet_b6 import EfficientNetB6
+from models.resnet50v2 import ResNet50V2
 import numpy as np
 from ldb import LDB
 from os import path
@@ -20,7 +23,10 @@ model_classes = {
     'VGG16': VGGNet,
     'Xception': XceptionNet,
     'DenseNet': DenseNet,
-    'ResNet50': ResNet50
+    'ResNet50': ResNet50,
+    'ResNet50V2': ResNet50V2,
+    'EfficientNetB4': EfficientNetB4,
+    'EfficientNetB6': EfficientNetB6
 }
 presets_info = [
     {
@@ -138,7 +144,7 @@ presets_info = [
         'model': 'DenseNet',
         'coll_param': {
             'collection_name': 'AnimeBack_DenseNet',
-            'dimension': 2048,
+            'dimension': 1664,
             'index_file_size': 2048,
             'metric_type': MetricType.L2
         },
@@ -146,7 +152,7 @@ presets_info = [
         'index_param': {
             "nlist": 2048
         },
-        'extract_dim': 2048,
+        'extract_dim': 1664,
         'db_path': 'db/frames_DenseNet',
         'search_param': {
             'nprobe': 16
@@ -169,6 +175,91 @@ presets_info = [
         },
         'extract_dim': 2048,
         'db_path': 'db/frames_ResNet50',
+        'search_param': {
+            'nprobe': 16
+        },
+        'ifscale': False
+    },
+    {
+        'name': 'ResNet50_PCA',
+        'enable': False,
+        'model': 'ResNet50',
+        'coll_param': {
+            'collection_name': 'AnimeBack_ResNet50_PCA',
+            'dimension': 512,
+            'index_file_size': 2048,
+            'metric_type': MetricType.L2
+        },
+        'index_type': IndexType.IVF_SQ8,
+        'index_param': {
+            "nlist": 2048
+        },
+        'extract_dim': 2048,
+        'db_path': 'db/frames_ResNet50_PCA',
+        'search_param': {
+            'nprobe': 16
+        },
+        'ifscale': False,
+        'pca_model': 'pca/resnet50_512.m'
+    },
+    {
+        'name': 'ResNet50V2',
+        'enable': False,
+        'model': 'ResNet50V2',
+        'coll_param': {
+            'collection_name': 'AnimeBack_ResNet50V2',
+            'dimension': 2048,
+            'index_file_size': 2048,
+            'metric_type': MetricType.L2
+        },
+        'index_type': IndexType.IVF_SQ8,
+        'index_param': {
+            "nlist": 2048
+        },
+        'extract_dim': 2048,
+        'db_path': 'db/frames_ResNet50V2',
+        'search_param': {
+            'nprobe': 16
+        },
+        'ifscale': False,
+    },
+    {
+        'name': 'EfficientNetB6',
+        'enable': False,
+        'model': 'EfficientNetB6',
+        'coll_param': {
+            'collection_name': 'AnimeBack_EfficientNetB6',
+            'dimension': 2304,
+            'index_file_size': 2048,
+            'metric_type': MetricType.L2
+        },
+        'index_type': IndexType.IVF_SQ8,
+        'index_param': {
+            "nlist": 2048
+        },
+        'extract_dim': 2304,
+        'db_path': 'db/frames_EfficientNetB6',
+        'search_param': {
+            'nprobe': 16
+        },
+        'ifscale': False
+    },
+    {
+        'name': 'EfficientNetB4',
+        'enable': False,
+        'model': 'EfficientNetB4',
+        'coll_param': {
+            'collection_name': 'AnimeBack_EfficientNetB4',
+            'dimension': 1792,
+            'index_file_size': 2048,
+            'metric_type': MetricType.L2
+        },
+        'index_type': IndexType.IVF_SQ8,
+        'index_param': {
+            "nlist": 2048
+        },
+        'extract_dim': 1792,
+        'db_path': 'db/frames_EfficientNetB4',
         'search_param': {
             'nprobe': 16
         },

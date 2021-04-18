@@ -1,19 +1,18 @@
 import numpy as np
 from numpy import linalg as LA
 
-from keras.applications.resnet50 import ResNet50 as KerasResNet50
+from tensorflow.keras.applications import EfficientNetB4 as ENB4
 from keras.preprocessing import image
-from keras.applications.resnet50 import preprocess_input
-
-class ResNet50:
+from tensorflow.keras.applications.efficientnet import preprocess_input
+class EfficientNetB4:
     def __init__(self):
-        self.input_shape = (224, 224, 3)
+        self.input_shape = (380, 380, 3)
         self.weight = 'imagenet'
         self.pooling = 'max'
-        self.model = KerasResNet50(weights = self.weight, input_shape = (self.input_shape[0], self.input_shape[1], self.input_shape[2]), pooling = self.pooling, include_top=False)
-        self.model.predict(np.zeros((1, 224, 224 , 3)))
+        self.model = ENB4(weights = self.weight, input_shape = (self.input_shape[0], self.input_shape[1], self.input_shape[2]), pooling = self.pooling, include_top = False)
+        self.model.predict(np.zeros((1, 380, 380 , 3)))
 
-    
+    # (1792,)
     def extract_feat(self, img_path):
         img = image.load_img(img_path, target_size=(self.input_shape[0], self.input_shape[1]))
         img = image.img_to_array(img)

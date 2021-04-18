@@ -458,7 +458,7 @@ class Episode(object):
     def remove_video(self):
         os.remove(self.get_downloaded_video())
         os.remove(path.join(self.download_path, 'done'))
-        os.rmdir(self.download_path)
+        #os.rmdir(self.download_path)
 
     def update_data(self, info):
         self.read_data()
