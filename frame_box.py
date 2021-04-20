@@ -5,10 +5,10 @@ import time
 import json
 from bilibili_api import bangumi
 from milvus import Milvus, IndexType, MetricType, Status
-from models.vgg16 import VGGNet
+#from models.vgg16 import VGGNet
 #from models.xception import XceptionNet
 from models.densenet169 import DenseNet
-from models.resnet50 import ResNet50
+#from models.resnet50 import ResNet50
 #from models.efficientnet_b4 import EfficientNetB4
 #from models.efficientnet_b6 import EfficientNetB6
 #from models.resnet50v2 import ResNet50V2
@@ -20,10 +20,10 @@ from sklearn.preprocessing import scale
 import joblib
 
 model_classes = {
-    'VGG16': VGGNet,
+    #'VGG16': VGGNet,
     #'Xception': XceptionNet,
     'DenseNet': DenseNet,
-    'ResNet50': ResNet50,
+    #'ResNet50': ResNet50,
     #'ResNet50V2': ResNet50V2,
     #'EfficientNetB4': EfficientNetB4,
     #'EfficientNetB6': EfficientNetB6,
@@ -70,7 +70,8 @@ presets_info = [
         'search_param': {
             'nprobe': 24
         },
-        'ifscale': False
+        'ifscale': False,
+        'isDefault': True
     },
     {
         'name': 'DenseNet_PCA',
@@ -133,7 +134,8 @@ class ModelPreset:
         self.search_param = info['search_param']
         self.ldb = LDB(self.db_path, create_if_missing=True)
         self.pca_enabled = ('pca_model' in info)
-        self.ifscale = info['ifscale']
+        self.ifscale = info['ifscale'] if 'ifscale' in info else False
+        self.is_default = info['isDefault'] if 'isDefault' in info else False
         if self.pca_enabled:
             self.pca = joblib.load(info['pca_model'])
 
@@ -265,6 +267,12 @@ class FrameBox(object):
                                      ids=ids, records=vectors.tolist())
         self.frame_buffer = []
 
+    def get_default_preset(self):
+        for preset in self.presets:
+            if preset.is_default:
+                return preset
+        return self.presets[0]
+
     def search_img(self, img_path, resultNum, preset_name=None):
         preset = None
         for i in self.presets:
@@ -272,7 +280,7 @@ class FrameBox(object):
                 preset = i
                 break
         if preset_name == None or preset_name == 'default':
-            preset = self.presets[0]
+            preset = self.get_default_preset()
         if not preset:
             raise ValueError('Invalid preset name')
         vectors = np.zeros((1, preset.extract_dim), dtype=float)
@@ -306,6 +314,14 @@ class FrameBox(object):
                 'time': frame['time']
             })
         self.flush()
+
+    def get_presets_status(self):
+        info = {}
+        for preset in self.presets:
+            info[preset.name] = {
+                'frameNum': preset.get_frame_num(),
+                'isDefault': preset.is_default
+            }
 
     def close(self):
         self.flush()

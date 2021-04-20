@@ -589,7 +589,12 @@ def get_status():
             'finishedPresets': season['finishedPresets']
         }
     db_seasons.close()
-    presets = [i.name for i in frame_box.presets]
+    presets = frame_box.get_presets_status()
+    for preset_name in presets:
+        presets['seasonIds'] = []
+        for season_id in seasons:
+            if preset_name in seasons[season_id]['finishedPresets']:
+                presets['seasonIds'].append(season_id)
     return {
         'seasons': seasons,
         'presets': presets

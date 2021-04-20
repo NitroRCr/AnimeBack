@@ -23,7 +23,7 @@ class App:
         self.hash_buffer = []
         self.IMAGE_TMP_PATH = os.path.join("static", "img", "tmp")
         self.IMAGE_SAVE_PATH = os.path.join("static", "img", "upload")
-        self.IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webm'}
+        self.IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp'}
         self.STATE_PATH = "state.json"
         self.CONFIG_PATH = "config.json"
         self.RES_SAVE_PATH = os.path.join("static", "json", "response")
