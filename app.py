@@ -129,11 +129,21 @@ class App:
 
         @flask.route('/info/episode/<id>', methods=['GET'])
         def get_episode(id):
-            return Episode(from_id=id).data
+            try:
+                ret = Episode(from_id=id).data
+            except ValueError as e:
+                print(e)
+                abort(404)
+            return ret
 
         @flask.route('/info/season/<id>', methods=['GET'])
         def get_season(id):
-            return Season(from_id=id).data
+            try:
+                ret = Season(from_id=id).data
+            except ValueError as e:
+                print(e)
+                abort(404)
+            return ret
 
         global flask_app
         flask_app = flask

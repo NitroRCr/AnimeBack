@@ -127,7 +127,7 @@ class Season:
                 self.set_data_from_bili(bili_ssid)
             self.data['finishedPresets'] = []
             self.data['targetPresets'] = settings['presets']
-            self.data['isDownloading'] = False
+            self.data['isDownloading'] = None
             self.data['isProcessing'] = False
             self.write_data()
         self.settings = settings
@@ -573,6 +573,11 @@ def _set_bili_url(results):
 def _filte_tag(results, tag):
     return [i for i in results if i['tag'] == tag]
 
+def sort_key(id):
+    if re.match(r'^\d+$', id):
+        return int(id)
+    return id
+
 
 def get_status():
     seasons = {}
@@ -591,10 +596,13 @@ def get_status():
     db_seasons.close()
     presets = frame_box.get_presets_status()
     for preset_name in presets:
-        presets['seasonIds'] = []
+        preset = presets[preset_name]
+        season = seasons[season_id]
+        preset['seasonIds'] = []
         for season_id in seasons:
-            if preset_name in seasons[season_id]['finishedPresets']:
-                presets['seasonIds'].append(season_id)
+            if preset_name in season['finishedPresets']:
+                preset['seasonIds'].append(season_id)
+        preset['seasonIds'].sort(key=sort_key)
     return {
         'seasons': seasons,
         'presets': presets

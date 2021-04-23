@@ -2,7 +2,7 @@
 
 以图搜番。这是一个动漫场景搜索引擎服务端。可以通过番剧某一刻的截图，反向搜索它出自哪部番，以及出现的确切时间。[网站前端](https://anime.krytro.com)
 
-与[trace.moe](https://github.com/soruly/trace.moe)相比，由于使用的是`vgg16`模型提取图像特征，此项目或许能够提供鲁棒性更高，更准确的搜索服务。也因此性能开销更大，收录比较慢。目前仍处于测试阶段
+与[trace.moe](https://github.com/soruly/trace.moe)相比，由于使用的是深度学习模型提取图像特征，此项目或许能够提供鲁棒性更高，更准确的搜索服务。也因此性能开销更大，收录比较慢。目前仍处于测试阶段
 
 ## 部署
 
@@ -13,7 +13,11 @@
 安装依赖项：
 
 ```bash
-pip install bilibili_api imagehash pillow tensorflow keras flask pymilvus opencv-python sklearn joblib
+pip install bilibili_api imagehash pillow tensorflow keras flask pymilvus opencv-python sklearn joblib plyvel
+```
+windows需安装`plyvel-win32`代替`plyvel`:
+```bash
+pip install plyvel-win32
 ```
 
 ### 运行
@@ -21,7 +25,7 @@ pip install bilibili_api imagehash pillow tensorflow keras flask pymilvus opencv
 - 初始化配置文件
 
 ```bash
-python init_conf.py
+python run.py
 ```
 
 - 安装并启动[milvus](https://milvus.io/cn/)
@@ -29,13 +33,38 @@ python init_conf.py
 - 编辑`config.json`：
 
   - ```json
-    {"milvus_host": "127.0.0.1", "milvus_port": 19530}
+    {
+      "milvus_host": "127.0.0.1",
+      "milvus_port": 19530
+      ...
+    }
     ```
 
   - 设置为`milvus`正在运行的地址和端口
 
 - [运行下载程序](https://github.com/NitroRCr/SearchAnimeByImage/tree/main/download_bilibili)
 - [运行视频处理/入库程序](https://github.com/NitroRCr/SearchAnimeByImage/tree/main/process)
+
+#### 通过API自动从B站下载视频
+编辑`config.json`：
+```json
+{
+    "milvus_host": "127.0.0.1",
+    "milvus_port": 19530,
+    "downloadDir": "download",
+    "videoOutDir": "static/video",
+    "imgTmpDir": "tmp_images",
+    "coverDir": "static/img/cover",
+    "downloadBilibili": {
+        "queue": {
+            "seasons": [
+              {"seasonId": 425}
+            ]
+        }
+    }
+}
+```
+
 
 #### 运行网站后端
 

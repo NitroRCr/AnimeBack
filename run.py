@@ -1,4 +1,4 @@
-from common import Episode, Season, get_json, train_apply
+from common import Episode, Season, get_json, train_apply, sort_key
 import os
 import re
 import sys
@@ -117,7 +117,7 @@ def process():
             if not os.path.exists(os.path.join(ep_dir, 'ready')):
                 continue
             season.add_episode(ep_dirname)
-        season.episodes.sort(key=lambda ep: int(ep.id) if re.match(r'^\d+$', ep.id) else ep.id)
+        season.episodes.sort(key=lambda ep: sort_key(ep.id))
         season.process()
     for dirname in os.listdir(config['downloadDir']):
         season_dir = os.path.join(config['downloadDir'], dirname)
@@ -135,7 +135,7 @@ def process():
             if not os.path.exists(os.path.join(ep_dir, 'done')):
                 continue
             season.add_episode(ep_dirname)
-        season.episodes.sort(key=lambda ep: int(ep.id) if re.match(r'^\d+$', ep.id) else ep.id)
+        season.episodes.sort(key=lambda ep: sort_key(ep.id))
         season.process()
 
 def train_pca():
@@ -161,12 +161,12 @@ def main():
     if sys.argv[1] == 'download-bilibili':
         download_bilibili()
         end_time = time.time()
-        if (end_time - start_time) > 60:
+        if (end_time - start_time) > 500:
             restart()
     elif sys.argv[1] == 'process':
         process()
         end_time = time.time()
-        if (end_time - start_time) > 60:
+        if (end_time - start_time) > 500:
             restart()
     elif sys.argv[1] == 'train-pca':
         train_pca()

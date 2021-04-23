@@ -52,7 +52,7 @@ presets_info = [
     },
     {
         'name': 'DenseNet',
-        'enable': True,
+        'enable': False,
         'model': 'DenseNet',
         'coll_param': {
             'collection_name': 'AnimeBack_DenseNet',
@@ -70,8 +70,7 @@ presets_info = [
         'search_param': {
             'nprobe': 24
         },
-        'ifscale': False,
-        'isDefault': True
+        'ifscale': False
     },
     {
         'name': 'DenseNet_PCA',
@@ -94,7 +93,8 @@ presets_info = [
             'nprobe': 16
         },
         'ifscale': False,
-        'pca_model': 'pca/pca_densenet_416.m'
+        'pca_model': 'pca/pca_densenet_416.m',
+        'isDefault': True
     },
     {
         'name': 'ResNet50',
@@ -322,6 +322,7 @@ class FrameBox(object):
                 'frameNum': preset.get_frame_num(),
                 'isDefault': preset.is_default
             }
+        return info
 
     def close(self):
         self.flush()
