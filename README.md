@@ -4,6 +4,16 @@
 
 与[trace.moe](https://github.com/soruly/trace.moe)相比，由于使用的是深度学习模型提取图像特征，此项目或许能够提供鲁棒性更高，更准确的搜索服务。也因此性能开销更大，收录比较慢。目前仍处于测试阶段
 
+## 示例
+
+测试图片
+
+<img src="https://file.krytro.com:1443/AnimeBack/img/dha.webp" alt="测试图片" title="测试图片" width=300>
+
+搜索结果
+
+![](https://file.krytro.com:1443/AnimeBack/img/result_qd.png)
+
 ## 部署
 
 ### 环境要求
