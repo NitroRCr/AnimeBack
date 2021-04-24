@@ -101,7 +101,7 @@ def download_bilibili():
         season.download()
 
 def process():
-    for dirname in os.listdir(config['imgTmpDir']):
+    for dirname in sorted(os.listdir(config['imgTmpDir']), key=sort_key):
         season_dir = os.path.join(config['imgTmpDir'], dirname)
         if not os.path.isdir(season_dir):
             continue
@@ -119,7 +119,7 @@ def process():
             season.add_episode(ep_dirname)
         season.episodes.sort(key=lambda ep: sort_key(ep.id))
         season.process()
-    for dirname in os.listdir(config['downloadDir']):
+    for dirname in sorted(os.listdir(config['downloadDir']), key=sort_key):
         season_dir = os.path.join(config['downloadDir'], dirname)
         if not os.path.isdir(season_dir):
             continue
