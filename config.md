@@ -40,6 +40,8 @@
 
 **PCA训练部分**
 
+如果预设启用了PCA降维，就需要相应的PCA模型。我们训练了几个PCA模型，可[前往下载](https://file.krytro.com:1443/AnimeBack/pca/)。也可以直接训练。在这里可以配置训练PCA模型的参数。
+
 `trainPCA`:
 
 - `episodes`: 用于训练的剧集的id。这些剧集将作为训练集，格式为`[< epid >, < epid >, ...]`
