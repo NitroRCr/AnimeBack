@@ -451,7 +451,6 @@ class Episode(object):
             frame_group.clear_all()
             os.remove(path.join(self.img_tmp_path, 'ready'))
             os.remove(self.img_tmp_path)
-        self.set_finished_presets()
         return DONE_MARK
 
     def set_finished_presets(self):
@@ -480,6 +479,7 @@ class Episode(object):
         self.set_data('status', 'finished')
         if PROC_CONF['removeVideo']:
             self.remove_video()
+        self.set_finished_presets()
         return DONE_MARK
 
     def add_to_trainer(self):
@@ -527,9 +527,10 @@ class FrameGroup:
     def __init__(self, img_path, rate):
         self.path = img_path
         self.rate = rate
-        self.frames = self.get_frames()
         self.length = None
-        self.BUFFER_MAX_LEN = 25
+        self.frames = None
+        self.BUFFER_MAX_LEN = 50
+        self.frames = self.get_frames()
 
     def log(func):
         def wrapper(self, *args, **kw):
@@ -560,13 +561,13 @@ class FrameGroup:
                 'phash': imagehash.phash(Image.open(file_path))
             })
             frames.sort(key=lambda x: x['time'])
-        return frames
+        self.frames = frames
 
     @log
     def filte_sim(self, rate):
         hash_buffer = []
         frames = []
-        for i in range(len(self.frames)):
+        for i in range(self.length):
             frame = self.frames[i]
             has_sim = False
             for phash in hash_buffer:
