@@ -185,16 +185,16 @@ class FrameBox(object):
             os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
         if enable_cuda and not disable_gpu:
-            config = tf.ConfigProto()
+            config = tf.compat.v1.ConfigProto()
             config.gpu_options.allow_growth = True
-            sess = tf.Session(config=config)
+            sess = tf.compat.v1.Session(config=config)
             set_session(sess)
         
         self.BUFFER_MAX_LEN = 10000
         self.frame_buffer = []
         self.milvus = None
         self.curr_presets = []
-        self.config = self.get_json(os.path.join(path, 'config.json'))
+        self.config = self.get_json('config.json')
         self.presets = [ModelPreset(info)
                         for info in presets_info if info['enable']]
         self.models = self.get_models()

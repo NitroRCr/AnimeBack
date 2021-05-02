@@ -29,7 +29,7 @@ class App:
         self.RES_SAVE_PATH = os.path.join("static", "json", "response")
         self.VIDEO_PATH = os.path.join("static", "video")
         self.PRE_URL = ""
-        load_frame_box()
+        load_frame_box(disable_gpu=True)
         self.create_flask()
 
     def get_json(self, path):

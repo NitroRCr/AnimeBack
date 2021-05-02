@@ -386,7 +386,6 @@ class Episode(object):
                 })
         if ret < 0:
             self.set_data('status', 'download_failed')
-            self._print('download failed')
             return FAIL_MARK
         else:
             self.set_data('status', 'downloaded')
