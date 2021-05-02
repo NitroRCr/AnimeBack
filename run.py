@@ -1,4 +1,13 @@
-from common import Episode, Season, get_json, train_apply, sort_key
+from common import (
+    Episode,
+    Season,
+    get_json,
+    train_apply,
+    sort_key,
+    db_status,
+    SKIP_MARK,
+    DONE_MARK
+)
 import os
 import re
 import sys
@@ -7,10 +16,20 @@ import json
 
 config = get_json('config.json')
 
+PROC_LIST_KEY = b'proc_list'
+HISTORY_KEY = b'history'
+if not db_status.get(PROC_LIST_KEY):
+    db_status.put(PROC_LIST_KEY, json.dumps([]).encode())
+if not db_status.get(HISTORY_KEY):
+    db_status.put(HISTORY_KEY, json.dumps({
+        'download': None
+    }).encode())
+
 CONF_TEMPLATES = {
     "config.json": {
         "milvus_host": "127.0.0.1",
         "milvus_port": 19530,
+        "keras_cuda": False,
         "downloadDir": "download",
         "videoOutDir": os.path.join("static", "video"),
         "imgTmpDir": "tmp_images",
@@ -57,6 +76,7 @@ DIRS = [
     'pca'
 ]
 
+
 def init():
     for i in DIRS:
         if not os.path.exists(i):
@@ -70,12 +90,46 @@ def init():
             f.write(json.dumps(CONF_TEMPLATES[i], indent=4))
             f.close()
 
+
+
 init()
 
+def get_history(key):
+    return json.loads(db_status.get(HISTORY_KEY).decode())[key]
+
+def put_history(key, value):
+    history = json.loads(db_status.get(HISTORY_KEY).decode())
+    history[key] = value
+    db_status.put(HISTORY_KEY, json.dumps(history).encode())
+
+def proc_list_push(season_id):
+    proc_list = json.loads(db_status.get(PROC_LIST_KEY).decode())
+    proc_list.append(season_id)
+    db_status.put(PROC_LIST_KEY, json.dumps(proc_list).encode())
+
+def proc_list_pop(index):
+    proc_list = json.loads(db_status.get(PROC_LIST_KEY).decode())
+    if index >= len(proc_list):
+        return None
+    ret = proc_list.pop(index)
+    db_status.put(PROC_LIST_KEY, json.dumps(proc_list).encode())
+    return ret
+
+def proc_list_get(index):
+    proc_list = json.loads(db_status.get(PROC_LIST_KEY).decode())
+    if index >= len(proc_list):
+        return None
+    return proc_list[index]
+
 def download_bilibili():
-    queue = config['downloadBilibili']['queue']
+    queue = config['downloadBilibili']['queue']['seasons']
     default = config['downloadBilibili']['default']
-    for s in queue['seasons']:
+    ids = [item['seasonId'] for item in queue]
+    history_id = get_history('download')
+    if history_id in ids:
+        index = ids.index()
+        queue = queue[index:] + queue[:index]
+    for s in queue:
         bili_ssid = s['seasonId']
         settings = {
             'SESSDATA': s['SESSDATA'] if 'SESSDATA' in s else default['SESSDATA'],
@@ -98,51 +152,55 @@ def download_bilibili():
         season.load_episodes(start, end)
         if override:
             season.update_settings(settings)
-        season.download()
+        if season.need_download():
+            put_history(season.id)
+            if season.download() == DONE_MARK:
+                proc_list_push(season.id)
+
 
 def process():
-    for dirname in sorted(os.listdir(config['imgTmpDir']), key=sort_key):
-        season_dir = os.path.join(config['imgTmpDir'], dirname)
-        if not os.path.isdir(season_dir):
-            continue
-        if not re.match(r'^\d+$', dirname):
-            continue
-        season = Season(from_id=dirname)
-        for ep_dirname in os.listdir(season_dir):
-            ep_dir = os.path.join(season_dir, ep_dirname)
-            if not os.path.isdir(ep_dir):
-                continue
-            if not re.match(r'^\d+$', ep_dirname):
-                continue
-            if not os.path.exists(os.path.join(ep_dir, 'ready')):
-                continue
-            season.add_episode(ep_dirname)
+    while proc_list_get(0):
+        season_id = proc_list_get(0)
+        season_dir = os.path.join(config['imgTmpDir'], season_id)
+        season = Season(from_id=season_id)
+        epids = []
+        if os.path.exists(season_dir):
+            for ep_dirname in os.listdir(season_dir):
+                ep_dir = os.path.join(season_dir, ep_dirname)
+                if not os.path.isdir(ep_dir):
+                    continue
+                if not re.match(r'^\d+$', ep_dirname):
+                    continue
+                if not os.path.exists(os.path.join(ep_dir, 'ready')):
+                    continue
+                season.add_episode(ep_dirname)
+                epids.append(ep_dirname)
+
+        season_dir = os.path.join(config['downloadDir'], season_id)
+        if os.path.exists(season_dir):
+            for ep_dirname in os.listdir(season_dir):
+                ep_dir = os.path.join(season_dir, ep_dirname)
+                if not os.path.isdir(ep_dir):
+                    continue
+                if not re.match(r'^\d+$', ep_dirname):
+                    continue
+                if not os.path.exists(os.path.join(ep_dir, 'done')):
+                    continue
+                if ep_dirname in epids:
+                    continue
+                season.add_episode(ep_dirname)
+
         season.episodes.sort(key=lambda ep: sort_key(ep.id))
         season.process()
-    for dirname in sorted(os.listdir(config['downloadDir']), key=sort_key):
-        season_dir = os.path.join(config['downloadDir'], dirname)
-        if not os.path.isdir(season_dir):
-            continue
-        if not re.match(r'^\d+$', dirname):
-            continue
-        season = Season(from_id=dirname)
-        for ep_dirname in os.listdir(season_dir):
-            ep_dir = os.path.join(season_dir, ep_dirname)
-            if not os.path.isdir(ep_dir):
-                continue
-            if not re.match(r'^\d+$', ep_dirname):
-                continue
-            if not os.path.exists(os.path.join(ep_dir, 'done')):
-                continue
-            season.add_episode(ep_dirname)
-        season.episodes.sort(key=lambda ep: sort_key(ep.id))
-        season.process()
+        proc_list_pop(0)
+
 
 def train_pca():
     for epid in config['trainPCA']['episodes']:
         episode = Episode(from_id=str(epid))
         episode.train_add()
     train_apply()
+
 
 def import_info(info):
     for i in info:
@@ -151,7 +209,7 @@ def import_info(info):
         elif 'season/' in i['type']:
             item = Season(from_id=i['id'])
         item.update_data(i)
-    
+
 
 def main():
     start_time = time.time()
@@ -176,10 +234,12 @@ def main():
         print('Invalid arg')
         return
 
+
 def restart():
     global config
     config = get_json('config.json')
     main()
+
 
 if __name__ == '__main__':
     main()

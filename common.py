@@ -15,6 +15,11 @@ from urllib import request
 
 NUMS_KEY = b'c_nums'
 REFER_KEY = b'refer'
+
+SKIP_MARK = 'skiped'
+FAIL_MARK = 'failed'
+DONE_MARK = 'done'
+
 frame_box = None
 pca_trainer = None
 
@@ -61,12 +66,13 @@ VIDEO_OUT_DIR = config['videoOutDir']
 IMG_TMP_DIR = config['imgTmpDir']
 PROC_CONF = config['process']
 COVER_DIR = config['coverDir']
+ENABLE_CUDA = config['keras_cuda']
 
 
-def load_frame_box():
+def load_frame_box(disable_gpu=False):
     global frame_box
     if not frame_box:
-        frame_box = FrameBox()
+        frame_box = FrameBox(ENABLE_CUDA, disable_gpu=disable_gpu)
         frame_box.connect()
 
 
@@ -138,12 +144,17 @@ class Season:
 
     def log(func):
         def wrapper(self, *args, **kw):
-            print('[%s]: %s start' % (self.id, func.__name__))
             start_time = time.time()
-            ret = func(self, *args, **kw)
+            onstart = lambda: self._print('%s start' % func.__name__)
+            ret = func(self, *args, onstart=onstart, **kw)
             end_time = time.time()
-            print('[%s]: %s takes %.2fs.' % (self.id, func.__name__,
-                                             end_time - start_time))
+            if ret == DONE_MARK:
+                self._print('%s takes %.2fs' % (func.__name__,
+                                                end_time - start_time))
+            elif ret == FAIL_MARK:
+                self._print('%s failed' % func.__name__)
+            elif ret == SKIP_MARK:
+                self._print('%s skiped' % func.__name__)
             return ret
         return wrapper
 
@@ -157,7 +168,7 @@ class Season:
                 'cover': info['cover']
             },
             # 链接不一定正确，需实测
-            "wikiLink": "https://zh.moegirl.org.cn/" + info['title'],
+            "wikiLink": "https://mzh.moegirl.org.cn/" + info['title'],
             "shortIntro": info['evaluate']
         }
         request.urlretrieve(info['cover'], path.join(COVER_DIR, self.id))
@@ -171,14 +182,16 @@ class Season:
         self.write_data()
 
     @log
-    def load_episodes(self, start=None, end=None):
+    def load_episodes(self, start=None, end=None, onstart=None):
         if self.data['type'] == 'season/bilibili':
             season_id = self.data['info']['ssId']
             info = bangumi.get_collective_info(season_id=season_id)
             episodes = info['episodes'][start:end]
+            onstart and onstart()
             for i in episodes:
                 self.episodes.append(
                     Episode(bili_epid=i['id'], settings=self.settings, season_id=self.id))
+            return DONE_MARK
 
     def add_episode(self, epid):
         episode = Episode(from_id=epid, season_id=self.id,
@@ -197,26 +210,41 @@ class Season:
         self.data[key] = value
         self.write_data()
 
+    def need_download(self):
+        for ep in self.episodes:
+            if ep.need_download():
+                return True
+        return False
+
+    def need_process(self):
+        for ep in self.episodes:
+            if ep.need_process():
+                return True
+        return False
+
     @log
-    def download(self):
-        self._print('downloading')
+    def download(self, onstart=None):
+        if not self.need_download():
+            return SKIP_MARK
+        onstart and onstart()
         self.set_data('isDownloading', True)
         for ep in self.episodes:
             ep.download()
         self.set_data('isDownloading', False)
-        self._print('downloaded')
+        return DONE_MARK
 
     @log
-    def process(self):
-        self._print('processing')
+    def process(self, onstart=None):
+        if not self.need_process():
+            return SKIP_MARK
+        onstart and onstart()
         self.set_data('isProcessing', True)
         for ep in self.episodes:
             ep.process()
         self.set_data('isProcessing', False)
         self.set_finished_presets()
-        self._print('processed')
+        return DONE_MARK
 
-    @log
     def train_add(self):
         for ep in self.episodes:
             ep.train_add()
@@ -268,16 +296,20 @@ class Episode(object):
         self.download_path = path.join(
             DOWNLOAD_DIR, self.data['seasonId'], self.id)
         self.video_out_path = path.join(VIDEO_OUT_DIR, self.id)
-        self.img_tmp_path = path.join(IMG_TMP_DIR, self.data['seasonId'], self.id)
+        self.img_tmp_path = path.join(
+            IMG_TMP_DIR, self.data['seasonId'], self.id)
 
     def log(func):
         def wrapper(self, *args, **kw):
-            print('[%s]: %s start' % (self.id, func.__name__))
             start_time = time.time()
-            ret = func(self, *args, **kw)
+            onstart = lambda: self._print('%s start' % func.__name__)
+            ret = func(self, *args, onstart=onstart, **kw)
             end_time = time.time()
-            print('[%s]: %s takes %.2fs' % (self.id, func.__name__,
-                                            end_time - start_time))
+            if ret == DONE_MARK:
+                self._print('%s takes %.2fs' % (func.__name__,
+                                                end_time - start_time))
+            elif ret == FAIL_MARK:
+                self._print('%s failed' % func.__name__)
             return ret
         return wrapper
 
@@ -340,11 +372,12 @@ class Episode(object):
             return False
         return True
 
-    def download(self):
+    @log
+    def download(self, onstart=None):
         self.read_data()
         if not self.need_download():
-            return
-        self._print('downloading')
+            return SKIP_MARK
+        onstart and onstart()
         if self.data['type'] == 'episode/bilibili':
             ret = download_bilibili_video(
                 self.data['info']['epid'], self.download_path, {
@@ -354,10 +387,11 @@ class Episode(object):
         if ret < 0:
             self.set_data('status', 'download_failed')
             self._print('download failed')
+            return FAIL_MARK
         else:
             self.set_data('status', 'downloaded')
-            self._print('downloaded')
             create_mark(path.join(self.download_path, 'done'))
+            return DONE_MARK
 
     def get_downloaded_video(self):
         flv = path.join(self.download_path, 'video.flv')
@@ -368,10 +402,12 @@ class Episode(object):
             return mp4
         raise FileNotFoundError('video not found')
 
-    def compress(self):
+    @log
+    def compress(self, onstart=None):
         self.read_data()
         if not self.need_compress():
-            return
+            return SKIP_MARK
+        onstart and onstart()
         self._print('compressing')
         video = self.get_downloaded_video()
         out_video = path.join(self.video_out_path, 'video.mp4')
@@ -383,12 +419,14 @@ class Episode(object):
                        % (video, PROC_CONF['crf'], PROC_CONF['resolution'], out_video), check=True, shell=True)  # 压缩视频
         create_mark(path.join(self.video_out_path, 'done'))
         self._print('compressed')
+        return DONE_MARK
 
-    def to_image(self):
-        self._print('converting to images')
+    @log
+    def to_image(self, onstart=None):
         self.read_data()
         if not self.need_to_image():
-            return
+            return SKIP_MARK
+        onstart and onstart()
         video = self.get_downloaded_video()
         if not path.exists(self.img_tmp_path):
             os.makedirs(self.img_tmp_path)
@@ -397,13 +435,14 @@ class Episode(object):
             "ffmpeg -i %s -r %d -q:v 2 -f image2 %s"
             % (video, PROC_CONF['rate'], pic_path), check=True, shell=True)
         create_mark(path.join(self.img_tmp_path, 'ready'))
-        self._print('converted')
+        return DONE_MARK
 
-    def insert_into_storage(self):
-        self._print('inserting')
+    @log
+    def insert_into_storage(self, onstart=None):
+        onstart and onstart()
         frame_group = FrameGroup(self.img_tmp_path, PROC_CONF['rate'])
         frame_group.filte_sim(PROC_CONF['filteSimlity'])
-        load_frame_box()
+        load_frame_box(disable_gpu=False)
         insert_presets = []
         for preset in self.data['targetPresets']:
             if preset not in self.data['finishedPresets']:
@@ -414,7 +453,7 @@ class Episode(object):
             os.remove(path.join(self.img_tmp_path, 'ready'))
             os.remove(self.img_tmp_path)
         self.set_finished_presets()
-        self._print('inserted')
+        return DONE_MARK
 
     def set_finished_presets(self):
         self.read_data()
@@ -423,27 +462,26 @@ class Episode(object):
                 self.data['finishedPresets'].append(preset)
         self.write_data()
 
-    def process(self):
+    @log
+    def process(self, onstart=None):
         self.read_data()
         if not self.need_process():
-            return
+            return SKIP_MARK
         if self.need_download():
-            return
-        self._print('processing')
+            return SKIP_MARK
+        onstart and onstart()
         try:
             self.compress()
             self.to_image()
             self.insert_into_storage()
         except Exception as e:
             print(e)
-            self._print('process failed')
             self.set_data('status', 'process_failed')
-            raise e
-            return
+            return FAIL_MARK
         self.set_data('status', 'finished')
         if PROC_CONF['removeVideo']:
             self.remove_video()
-        self._print('processed')
+        return DONE_MARK
 
     def add_to_trainer(self):
         frame_group = FrameGroup(self.img_tmp_path, PROC_CONF['rate'])
@@ -457,15 +495,18 @@ class Episode(object):
         self.to_image()
         self.add_to_trainer()
 
-    def remove_video(self):
+    def remove_video(self, onstart=None):
         if not path.exists(self.download_path):
-            return
+            return SKIP_MARK
+        onstart and onstart()
         try:
             os.remove(self.get_downloaded_video())
             os.remove(path.join(self.download_path, 'done'))
             os.rmdir(self.download_path)
+            return DONE_MARK
         except Exception as e:
             print(e)
+            return FAIL_MARK
 
     def update_data(self, info):
         self.read_data()
@@ -490,8 +531,19 @@ class FrameGroup:
         self.frames = self.get_frames()
         self.BUFFER_MAX_LEN = 25
 
+    def log(func):
+        def wrapper(self, *args, **kw):
+            print('%s start' % (func.__name__))
+            start_time = time.time()
+            ret = func(self, *args, **kw)
+            t = time.time() - start_time
+            fps = len(self.frames)/t
+            print('%s takes %.2fs, fps=%.2f' % (func.__name__, t, fps))
+            return ret
+        return wrapper
+
+    @log
     def get_frames(self):
-        print('read frames')
         files = os.listdir(self.path)
         frames = []
         for i in files:
@@ -509,8 +561,8 @@ class FrameGroup:
             frames.sort(key=lambda x: x['time'])
         return frames
 
+    @log
     def filte_sim(self, rate):
-        print('filte sim')
         hash_buffer = []
         frames = []
         for i in range(len(self.frames)):
@@ -540,7 +592,7 @@ class FrameGroup:
 
 def search(img_path, preset=None, resultNum=None, tag=None):
     resultNum = resultNum if resultNum else 20 if not tag else 100
-    load_frame_box()
+    load_frame_box(disable_gpu=True)
     results = frame_box.search_img(
         img_path, resultNum=resultNum, preset_name=preset)
     _set_epinfo(results)
@@ -572,6 +624,7 @@ def _set_bili_url(results):
 
 def _filte_tag(results, tag):
     return [i for i in results if i['tag'] == tag]
+
 
 def sort_key(id):
     if re.match(r'^\d+$', id):

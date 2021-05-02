@@ -8,20 +8,19 @@ class LDB:
         self.isopen = False
         self.args = args
         self.kw = kw
-        self.tried = 0
 
-    def open(self, wait=10):
+    def open(self, wait=None):
+        if wait is None:
+            wait = [0.1, 0.2, 0.5, 1, 3, 5, 10, 20, 30]
         if not self.isopen:
             try:
                 if (not self.db) or self.db.closed:
                     self.db = plyvel.DB(self.name, *self.args, **self.kw)
             except plyvel.IOError as e:
-                if self.tried >= wait:
-                    self.tried = 0
+                if len(wait) == 0:
                     raise e
-                self.tried += 1
-                time.sleep(0.2)
-                self.open()
+                time.sleep(wait.pop(0))
+                self.open(wait)
                 return
             self.isopen = True
 

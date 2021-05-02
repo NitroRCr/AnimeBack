@@ -23,13 +23,12 @@
 安装依赖项：
 
 ```bash
-pip install bilibili_api imagehash pillow tensorflow keras flask pymilvus opencv-python sklearn joblib plyvel
-```
-windows需安装`plyvel-win32`代替`plyvel`:
-```bash
+pip install bilibili_api imagehash pillow tensorflow keras flask pymilvus opencv-python sklearn joblib
+# Linux
+pip install plyvel
+# Windows
 pip install plyvel-win32
 ```
-
 ### 运行
 
 - 初始化配置文件

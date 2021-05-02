@@ -12,6 +12,8 @@ from models.densenet169 import DenseNet
 #from models.efficientnet_b4 import EfficientNetB4
 #from models.efficientnet_b6 import EfficientNetB6
 #from models.resnet50v2 import ResNet50V2
+from tensorflow.python.keras.backend import set_session
+import tensorflow as tf
 import numpy as np
 from ldb import LDB
 from os import path
@@ -177,7 +179,17 @@ class PCAPreset:
 
 class FrameBox(object):
 
-    def __init__(self, path="."):
+    def __init__(self, enable_cuda, disable_gpu=False):
+        if enable_cuda and disable_gpu:
+            os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+            os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
+        if enable_cuda and not disable_gpu:
+            config = tf.ConfigProto()
+            config.gpu_options.allow_growth = True
+            sess = tf.Session(config=config)
+            set_session(sess)
+        
         self.BUFFER_MAX_LEN = 10000
         self.frame_buffer = []
         self.milvus = None
@@ -240,6 +252,7 @@ class FrameBox(object):
         self.frame_buffer.append({"feat": feat, "brief": brief})
 
     def flush(self):
+        t0 = time.time()
         length = len(self.frame_buffer)
         if length == 0:
             return
@@ -266,6 +279,8 @@ class FrameBox(object):
             res = self.milvus.insert(collection_name=preset.coll_name,
                                      ids=ids, records=vectors.tolist())
         self.frame_buffer = []
+        t = time.time() - t0
+        print('inserted %d frames in %.2fs, fps=%.2f' % (length, t, length/t))
 
     def get_default_preset(self):
         for preset in self.presets:
@@ -305,7 +320,8 @@ class FrameBox(object):
         return results
 
     def insert(self, frames, epid, preset_names):
-        print('extract feat and insert into milvus')
+        t0 = time.time()
+        print('extract feat start')
         self.curr_presets = [
             preset for preset in self.presets if preset.name in preset_names]
         for frame in frames:
@@ -313,6 +329,9 @@ class FrameBox(object):
                 'epid': epid,
                 'time': frame['time']
             })
+        t = time.time() - t0
+        fps = len(frames)/t
+        print('extract feat takes %.2fs, fps=%.2f' % (t, fps))
         self.flush()
 
     def get_presets_status(self):

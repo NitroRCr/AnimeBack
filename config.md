@@ -2,6 +2,7 @@
 配置文件`config.json`:
 - `milvus_host`: 运行milvus的主机
 - `milvus_port`: milvus绑定的端口
+- `keras_cuda`: 是否使用`CUDA`加速特征提取（为减少显存消耗，仅在处理部分启用）
 - `downloadDir`: 视频下载目录
 - `imgTmpDir`: 帧截图临时目录
 - `coverDir`: 动漫封面图片下载目录
