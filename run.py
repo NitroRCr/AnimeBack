@@ -154,8 +154,9 @@ def download_bilibili():
             season.update_settings(settings)
         if season.need_download():
             put_history(season.id)
-            if season.download() == DONE_MARK:
-                proc_list_push(season.id)
+            season.download()
+        if season.need_process():
+            proc_list_push(season.id)
 
 
 def process():
