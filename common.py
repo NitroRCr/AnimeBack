@@ -528,6 +528,7 @@ class FrameGroup:
         self.path = img_path
         self.rate = rate
         self.frames = self.get_frames()
+        self.length = None
         self.BUFFER_MAX_LEN = 25
 
     def log(func):
@@ -536,7 +537,7 @@ class FrameGroup:
             start_time = time.time()
             ret = func(self, *args, **kw)
             t = time.time() - start_time
-            fps = len(self.frames)/t
+            fps = self.length/t
             print('%s takes %.2fs, fps=%.2f' % (func.__name__, t, fps))
             return ret
         return wrapper
@@ -544,6 +545,7 @@ class FrameGroup:
     @log
     def get_frames(self):
         files = os.listdir(self.path)
+        self.length = len(files)
         frames = []
         for i in files:
             file_path = path.join(self.path, i)
