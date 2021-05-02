@@ -152,10 +152,11 @@ def download_bilibili():
         season.load_episodes(start, end)
         if override:
             season.update_settings(settings)
-        if season.need_download():
-            put_history(season.id)
+        need_process = season.need_process()
+        if need_process and season.need_download():
+            put_history('download', season.id)
             season.download()
-        if season.need_process():
+        if need_process:
             proc_list_push(season.id)
 
 
