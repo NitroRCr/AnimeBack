@@ -125,25 +125,34 @@ class App:
 
         @flask.route('/info/status', methods=['GET'])
         def get_main_status():
-            return get_status()
+            return json.dumps(get_status(), ensure_ascii=False)
 
         @flask.route('/info/episode/<id>', methods=['GET'])
         def get_episode(id):
             try:
-                ret = Episode(from_id=id).data
+                data = Episode(from_id=id).data
+                return json.dumps({
+                    'id': id,
+                    'name': data['name'],
+                    'type': data['type'],
+                    'seasonId': data['seasonId'],
+                    'status': data['status'],
+                    'tag': data['tag'],
+                    'targetPresets': data['targetPresets'],
+                    'finishedPresets': data['finishedPresets'],
+                    'info': data['info']
+                }, ensure_ascii=False)
             except ValueError as e:
                 print(e)
                 abort(404)
-            return ret
 
         @flask.route('/info/season/<id>', methods=['GET'])
         def get_season(id):
             try:
-                ret = Season(from_id=id).data
+                return json.dumps(Season(from_id=id).data, ensure_ascii=False)
             except ValueError as e:
                 print(e)
                 abort(404)
-            return ret
 
         global flask_app
         flask_app = flask

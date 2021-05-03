@@ -2,12 +2,10 @@
 import requests
 import time
 import urllib
-import requests
 import os
 import threading
 import json
 import re
-from bilibili_api import bangumi
 
 import subprocess
 
@@ -26,7 +24,7 @@ def get_play_list(aid, cid, settings):
     if html['code'] != 0:
         print(html)
         print('注意!当前集数为B站大会员专享,若想下载,Cookie中请传入大会员的SESSDATA')
-        return -1
+        raise ValueError('No VIP')
     video_list = []
     for i in html['data']['durl']:
         video_list.append(i['url'])
@@ -86,10 +84,8 @@ def download_bilibili_video(epid, down_path, settings):
     video_list = get_play_list(aid, cid, settings)
     # down_video(video_list, title, start_url, page)
     # 定义线程
-    if video_list == -1:
-        return -1
-    else:
-        down_video(video_list, title, start_url, down_path)
+
+    down_video(video_list, title, start_url, down_path)
 
     if os.path.exists(os.path.join(down_path, 'part-1.flv')):
         combine_video(str_id, down_path)

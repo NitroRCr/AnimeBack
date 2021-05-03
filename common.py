@@ -4,6 +4,7 @@ import os
 from ldb import LDB
 from bilibili_api import bangumi
 from download_bilibili import download_bilibili_video
+import download_sakura
 import re
 import subprocess
 import imagehash
@@ -39,7 +40,9 @@ if not db_status.get(NUMS_KEY):
 if not db_status.get(REFER_KEY):
     db_status.put(REFER_KEY, json.dumps({
         'episode/bilibili': {},
-        'season/bilibili': {}
+        'season/bilibili': {},
+        'episode/sakura': {},
+        'season/sakura': {}
     }).encode())
 
 
@@ -114,8 +117,10 @@ def create_mark(filename):
 
 
 class Season:
-    def __init__(self, bili_ssid=None, from_id=None,
+    def __init__(self, bili_ssid=None, sakura_id=None, from_id=None, 
                  settings=None):
+        if not ((bili_ssid or sakura_id or from_id) and (settings or from_id)):
+            raise ValueError('id and settings are required')
         if from_id:
             self.id = from_id
             data = db_seasons.get(from_id.encode())
@@ -126,16 +131,23 @@ class Season:
         elif bili_ssid and get_id('season/bilibili', bili_ssid):
             self.id = get_id('season/bilibili', bili_ssid)
             self.data = json.loads(db_seasons.get(self.id.encode()).decode())
+        elif sakura_id and get_id('season/sakura', sakura_id):
+            self.id = get_id('season/sakura', sakura_id)
+            self.data = json.loads(db_seasons.get(self.id.encode()).decode())
         else:
             self.id = str(get_num('maxSsId'))
             self.data = {}
             if bili_ssid:
                 self.set_data_from_bili(bili_ssid)
+            elif sakura_id:
+                self.set_data_from_sakura(sakura_id)
             self.data['finishedPresets'] = []
             self.data['targetPresets'] = settings['presets']
             self.data['isDownloading'] = None
             self.data['isProcessing'] = False
             self.write_data()
+            if settings['tag'] == '$seasonId':
+                settings['tag'] = self.id
         self.settings = settings
         self.episodes = []
 
@@ -174,6 +186,22 @@ class Season:
         request.urlretrieve(info['cover'], path.join(COVER_DIR, self.id))
         set_refer('season/bilibili', season_id, self.id)
 
+    def set_data_from_sakura(self, season_id):
+        info = download_sakura.get_season_info(season_id)
+        self.data = {
+            'name': info['name'],
+            'type': 'season/sakura',
+            'info': {
+                'ssId': season_id,
+                'cover': info['cover']
+            },
+            # 链接不一定正确，需实测
+            'wikiLink': "https://mzh.moegirl.org.cn/" + info['name'],
+            'shortIntro': info['evaluate']
+        }
+        request.urlretrieve(info['cover'], path.join(COVER_DIR, self.id))
+        set_refer('season/sakura', season_id, self.id)
+
     def set_finished_presets(self):
         self.read_data()
         for preset in self.data['targetPresets']:
@@ -191,6 +219,15 @@ class Season:
             for i in episodes:
                 self.episodes.append(
                     Episode(bili_epid=i['id'], settings=self.settings, season_id=self.id))
+            return DONE_MARK
+        elif self.data['type'] == 'season/sakura':
+            season_id = self.data['info']['ssId']
+            info = download_sakura.get_season_info(season_id)
+            episodes = info['episodes'][start:end]
+            onstart and onstart()
+            for i in episodes:
+                self.episodes.append(
+                    Episode(sakura_id=i['id'], settings=self.settings, season_id=self.id))
             return DONE_MARK
 
     def add_episode(self, epid):
@@ -267,8 +304,10 @@ class Season:
 
 
 class Episode(object):
-    def __init__(self, bili_epid=None, from_id=None,
+    def __init__(self, bili_epid=None, sakura_id=None, from_id=None,
                  settings=None, season_id=None):
+        if not ((bili_epid or sakura_id or from_id) and (settings or from_id)):
+            raise ValueError('id and settings are required')
         if from_id:
             self.id = from_id
             data = db_episodes.get(from_id.encode())
@@ -280,12 +319,15 @@ class Episode(object):
             self.id = get_id('episode/bilibili', bili_epid)
             self.data = json.loads(db_episodes.get(self.id.encode()))
         else:
+            self.id = str(get_num('maxEpId'))
             if bili_epid:
-                self.id = str(get_num('maxEpId'))
                 self.data = self.get_data_from_bili(bili_epid)
                 self.data['quality'] = settings['quality']
                 self.data['SESSDATA'] = settings['SESSDATA']
                 set_refer('episode/bilibili', bili_epid, self.id)
+            elif sakura_id:
+                self.data = self.get_data_from_sakura(sakura_id)
+                set_refer('episode/sakura', sakura_id, self.id)
             self.data['tag'] = settings['tag']
             self.data['status'] = 'waiting'
             self.data['finishedPresets'] = []
@@ -328,6 +370,18 @@ class Episode(object):
             },
             'hasNext': info['epInfo']['hasNext'],
             'title': info['epInfo']['title']
+        }
+    
+    def get_data_from_sakura(self, epid):
+        info = download_sakura.get_episode_info(epid)
+        return {
+            'name': info['fullName'],
+            'type': 'episode/sakura',
+            'info': {
+                'id': info['id'],
+                'video': info['video']
+            },
+            'title': info['name']
         }
 
     def set_info(self, info):
@@ -378,19 +432,24 @@ class Episode(object):
         if not self.need_download():
             return SKIP_MARK
         onstart and onstart()
-        if self.data['type'] == 'episode/bilibili':
-            ret = download_bilibili_video(
-                self.data['info']['epid'], self.download_path, {
-                    'quality': self.data['quality'],
-                    'SESSDATA': self.data['SESSDATA']
-                })
-        if ret < 0:
+        try:
+            if self.data['type'] == 'episode/bilibili':
+                download_bilibili_video(
+                    self.data['info']['epid'], self.download_path, {
+                        'quality': self.data['quality'],
+                        'SESSDATA': self.data['SESSDATA']
+                    })
+            elif self.data['type'] == 'episode/sakura':
+                download_sakura.download(
+                    self.data['info']['video'], self.download_path
+                )
+        except Exception as e:
+            print(e)
             self.set_data('status', 'download_failed')
             return FAIL_MARK
-        else:
-            self.set_data('status', 'downloaded')
-            create_mark(path.join(self.download_path, 'done'))
-            return DONE_MARK
+        self.set_data('status', 'downloaded')
+        create_mark(path.join(self.download_path, 'done'))
+        return DONE_MARK
 
     def get_downloaded_video(self):
         flv = path.join(self.download_path, 'video.flv')
@@ -598,7 +657,7 @@ def search(img_path, preset=None, resultNum=None, tag=None):
     results = frame_box.search_img(
         img_path, resultNum=resultNum, preset_name=preset)
     _set_epinfo(results)
-    _set_bili_url(results)
+    _set_jump_url(results)
     if tag:
         results = _filte_tag(results, tag)
     return results
@@ -616,11 +675,13 @@ def _set_epinfo(results):
     return results
 
 
-def _set_bili_url(results):
+def _set_jump_url(results):
     for i in results:
         if i['type'] == 'episode/bilibili':
             i['biliUrl'] = 'https://www.bilibili.com/bangumi/play/ep%d?t=%.1f' % (
                 i['info']['epid'], i['time'])
+        elif i['type'] == 'episode/sakura':
+            i['sakuraUrl'] = 'http://www.yhdm.so/v/%s.html' % i['info']['id']
     return results
 
 
@@ -646,7 +707,10 @@ def get_status():
             'isDownloading': season['isDownloading'],
             'isProcessing': season['isProcessing'],
             'targetPresets': season['targetPresets'],
-            'finishedPresets': season['finishedPresets']
+            'finishedPresets': season['finishedPresets'],
+            'info': {
+                'ssId': season['info']['ssId']
+            }
         }
     db_seasons.close()
     presets = frame_box.get_presets_status()

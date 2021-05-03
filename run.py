@@ -22,9 +22,9 @@ if not db_status.get(PROC_LIST_KEY):
     db_status.put(PROC_LIST_KEY, json.dumps([]).encode())
 if not db_status.get(HISTORY_KEY):
     db_status.put(HISTORY_KEY, json.dumps({
-        'download': None
+        'downloadBilibili': None,
+        'downloadSakura': None
     }).encode())
-
 CONF_TEMPLATES = {
     "config.json": {
         "milvus_host": "127.0.0.1",
@@ -41,6 +41,19 @@ CONF_TEMPLATES = {
             "default": {
                 "SESSDATA": "",
                 "quality": 64,
+                "presets": [
+                    "Xception_PCA"
+                ],
+                "tag": "$seasonId",
+                "episodes": "^:$",
+                "override": False
+            },
+        },
+        "downloadSakura": {
+            "queue": {
+                "seasons": []
+            },
+            "default": {
                 "presets": [
                     "Xception_PCA"
                 ],
@@ -125,9 +138,9 @@ def download_bilibili():
     queue = config['downloadBilibili']['queue']['seasons']
     default = config['downloadBilibili']['default']
     ids = [item['seasonId'] for item in queue]
-    history_id = get_history('download')
+    history_id = get_history('downloadBilibili')
     if history_id in ids:
-        index = ids.index()
+        index = ids.index(history_id)
         queue = queue[index:] + queue[:index]
     for s in queue:
         bili_ssid = s['seasonId']
@@ -154,7 +167,44 @@ def download_bilibili():
             season.update_settings(settings)
         need_process = season.need_process()
         if need_process and season.need_download():
-            put_history('download', season.id)
+            put_history('downloadBilibili', season.id)
+            season.download()
+        if need_process:
+            proc_list_push(season.id)
+
+
+def download_sakura():
+    queue = config['downloadSakura']['queue']['seasons']
+    default = config['downloadSakura']['default']
+    ids = [item['seasonId'] for item in queue]
+    history_id = get_history('downloadSakura')
+    if history_id in ids:
+        index = ids.index(history_id)
+        queue = queue[index:] + queue[:index]
+    for s in queue:
+        sakura_id = s['seasonId']
+        settings = {
+            'presets': s['presets'] if 'presets' in s else default['presets'],
+            'tag': s['tag'] if 'tag' in s else default['tag'],
+        }
+        episodes_str = s['episodes'] if 'episodes' in s else default['episodes']
+        override = s['override'] if 'override' in s else default['override']
+        start, end = episodes_str.split(":")
+        if start == '^':
+            start = None
+        else:
+            start = int(start)
+        if end == '$':
+            end = None
+        else:
+            end = int(end)
+        season = Season(sakura_id=sakura_id, settings=settings)
+        season.load_episodes(start, end)
+        if override:
+            season.update_settings(settings)
+        need_process = season.need_process()
+        if need_process and season.need_download():
+            put_history('downloadSakura', season.id)
             season.download()
         if need_process:
             proc_list_push(season.id)
@@ -214,20 +264,14 @@ def import_info(info):
 
 
 def main():
-    start_time = time.time()
     if len(sys.argv) <= 1:
-        print('Must input arg')
         return
     if sys.argv[1] == 'download-bilibili':
         download_bilibili()
-        end_time = time.time()
-        if (end_time - start_time) > 500:
-            restart()
+    elif sys.argv[1] == 'download-sakura':
+        download_sakura()
     elif sys.argv[1] == 'process':
         process()
-        end_time = time.time()
-        if (end_time - start_time) > 500:
-            restart()
     elif sys.argv[1] == 'train-pca':
         train_pca()
     elif sys.argv[1] == 'import-info':
@@ -239,8 +283,10 @@ def main():
 
 def restart():
     global config
-    config = get_json('config.json')
-    main()
+    new_config = get_json('config.json')
+    if not new_config == config:
+        config = new_config
+        main()
 
 
 if __name__ == '__main__':
