@@ -6,7 +6,8 @@ from common import (
     sort_key,
     db_status,
     SKIP_MARK,
-    DONE_MARK
+    DONE_MARK,
+    HAS_ERR_MARK
 )
 import os
 import re
@@ -243,8 +244,8 @@ def process():
                 season.add_episode(ep_dirname)
 
         season.episodes.sort(key=lambda ep: sort_key(ep.id))
-        season.process()
-        proc_list_pop(0)
+        if season.process() != HAS_ERR_MARK:
+            proc_list_pop(0)
 
 
 def train_pca():

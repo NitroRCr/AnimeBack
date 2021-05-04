@@ -20,6 +20,7 @@ REFER_KEY = b'refer'
 SKIP_MARK = 'skiped'
 FAIL_MARK = 'failed'
 DONE_MARK = 'done'
+HAS_ERR_MARK = 'has_error'
 
 frame_box = None
 pca_trainer = None
@@ -264,23 +265,27 @@ class Season:
         if not self.need_download():
             return SKIP_MARK
         onstart and onstart()
+        has_err = False
         self.set_data('isDownloading', True)
         for ep in self.episodes:
-            ep.download()
+            if ep.download() == FAIL_MARK:
+                has_err = True
         self.set_data('isDownloading', False)
-        return DONE_MARK
+        return HAS_ERR_MARK if has_err else DONE_MARK
 
     @log
     def process(self, onstart=None):
         if not self.need_process():
             return SKIP_MARK
         onstart and onstart()
+        has_err = False
         self.set_data('isProcessing', True)
         for ep in self.episodes:
-            ep.process()
+            if ep.process() == FAIL_MARK:
+                has_err = True
         self.set_data('isProcessing', False)
         self.set_finished_presets()
-        return DONE_MARK
+        return HAS_ERR_MARK if has_err else DONE_MARK
 
     def train_add(self):
         for ep in self.episodes:
@@ -605,8 +610,6 @@ class FrameGroup:
     @log
     def get_frames(self):
         files = os.listdir(self.path)
-        self.length = len(files)
-        frames = []
         for i in files:
             file_path = path.join(self.path, i)
             if not path.isfile(file_path):
@@ -620,6 +623,7 @@ class FrameGroup:
                 'phash': imagehash.phash(Image.open(file_path))
             })
             frames.sort(key=lambda x: x['time'])
+        self.length = len(frames)
         self.frames = frames
 
     @log
