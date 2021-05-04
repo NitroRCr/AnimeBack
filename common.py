@@ -610,6 +610,7 @@ class FrameGroup:
     @log
     def get_frames(self):
         files = os.listdir(self.path)
+        frames = []
         for i in files:
             file_path = path.join(self.path, i)
             if not path.isfile(file_path):
