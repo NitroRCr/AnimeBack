@@ -9,11 +9,12 @@
 
 **下载部分**
 
+从B站下载
+
 `downloadBilibili`: 
 
 - `seasons`: 需下载的季(season)的列表，每一项有以下参数：
-  - `seasonId`: 必填。B站的season id
-  - `SESSDATA`: 
+  - `seasonId`: 必填。该季在B站的id，在页面链接中查看。如`https://www.bilibili.com/bangumi/play/ss425/`，id为`425`
   - `quality`：下载画质，可选值：
     - `116`：`1080P60`（需要大会员）
     - `112`：`1080P+`（需要大会员）
@@ -22,6 +23,18 @@
     - `64`：`720P`
     - `32`：`480P`
     - `16`：`360P`
+  - `presets`: 将会录入的预设(preset)
+  - `tag`: 标签。用于搜索结果的过滤。
+  - `episodes`: 将会下载的剧集范围。用切片索引表示。默认`^:$`，从开始(`^`)到结束(`$`)。
+  - `override`: 是否覆写参数。如果为`false`，已下载的`season`的参数不会更新
+- `default`: 每个season的默认参数
+
+从樱花动漫下载
+
+`downloadSakura`:
+
+- `seasons`: 需下载的季(season)的列表，每一项有以下参数：
+  - `seasonId`: 必填。该季在樱花的id，在页面链接中查看。如`http://www.yhdm.so/v/4742.html`，id为`4742`
   - `presets`: 将会录入的预设(preset)
   - `tag`: 标签。用于搜索结果的过滤。
   - `episodes`: 将会下载的剧集范围。用切片索引表示。默认`^:$`，从开始(`^`)到结束(`$`)。

@@ -23,7 +23,7 @@
 安装依赖项：
 
 ```bash
-pip install bilibili_api imagehash pillow tensorflow keras flask pymilvus opencv-python sklearn joblib
+pip install bilibili_api imagehash tensorflow keras flask pymilvus opencv-python sklearn
 # Linux
 pip install plyvel
 # Windows
@@ -68,7 +68,7 @@ gunicorn -w 4 -b 127.0.0.1:4000 app:flask_app
 
 ## 技术实现
 
-- 通过[bilibili](https://www.bilibili.com/)的API，自动下载番剧，并初步保存番剧信息
+- 通过[bilibili](https://www.bilibili.com/)(或[樱花动漫](http://www.yhdm.so/))的API，自动下载番剧，并初步保存番剧信息
 
 - 使用[ffmpeg](https://ffmpeg.org/about.html)压缩视频并转为mp4，放到网站静态目录下
 - 使用[ffmpeg](https://ffmpeg.org/about.html)，将视频以一定采样率转为图片，放到临时目录
@@ -80,7 +80,7 @@ gunicorn -w 4 -b 127.0.0.1:4000 app:flask_app
 - [x] ~~支持`Xception`预训练模型与`PCA`降维~~
 - [ ] 训练更符合需求的模型
 - [ ] 实现对op/ed的优化
-- [ ] 自动从[樱花动漫](http://www.yhdm.io/)下载
+- [x] 自动从[樱花动漫](http://www.yhdm.so/)下载
 - [ ] 开放搜索API
 
 ## Thanks · 鸣谢
