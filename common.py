@@ -589,7 +589,7 @@ class FrameGroup:
         self.length = None
         self.frames = None
         self.BUFFER_MAX_LEN = 50
-        self.frames = self.get_frames()
+        self.get_frames()
 
     def log(func):
         def wrapper(self, *args, **kw):
