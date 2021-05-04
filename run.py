@@ -35,6 +35,7 @@ CONF_TEMPLATES = {
         "videoOutDir": os.path.join("static", "video"),
         "imgTmpDir": "tmp_images",
         "coverDir": os.path.join("static", "img", "cover"),
+        "logFile": "AnimeBack.log",
         "downloadBilibili": {
             "queue": {
                 "seasons": []

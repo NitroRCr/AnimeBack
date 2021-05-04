@@ -13,6 +13,7 @@ from frame_box import FrameBox, PCATrainer
 import random
 import time
 from urllib import request
+import logging
 
 NUMS_KEY = b'c_nums'
 REFER_KEY = b'refer'
@@ -72,6 +73,12 @@ PROC_CONF = config['process']
 COVER_DIR = config['coverDir']
 ENABLE_CUDA = config['keras_cuda']
 
+logging.basicConfig(
+    filename=config['logFile'],
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 def load_frame_box(disable_gpu=False):
     global frame_box
@@ -118,7 +125,7 @@ def create_mark(filename):
 
 
 class Season:
-    def __init__(self, bili_ssid=None, sakura_id=None, from_id=None, 
+    def __init__(self, bili_ssid=None, sakura_id=None, from_id=None,
                  settings=None):
         if not ((bili_ssid or sakura_id or from_id) and (settings or from_id)):
             raise ValueError('id and settings are required')
@@ -152,13 +159,15 @@ class Season:
         self.settings = settings
         self.episodes = []
 
-    def _print(self, obj):
-        print('[%s]:' % self.id, obj)
+    def _print(self, obj, level=logging.INFO):
+        msg = '[%s]: ' % self.id + str(obj)
+        print(msg)
+        logging.log(level, msg)
 
     def log(func):
         def wrapper(self, *args, **kw):
             start_time = time.time()
-            onstart = lambda: self._print('%s start' % func.__name__)
+            def onstart(): return self._print('%s start' % func.__name__)
             ret = func(self, *args, onstart=onstart, **kw)
             end_time = time.time()
             if ret == DONE_MARK:
@@ -323,6 +332,9 @@ class Episode(object):
         elif bili_epid and get_id('episode/bilibili', bili_epid):
             self.id = get_id('episode/bilibili', bili_epid)
             self.data = json.loads(db_episodes.get(self.id.encode()))
+        elif sakura_id and get_id('episode/sakura', sakura_id):
+            self.id = get_id('episode/sakura', sakura_id)
+            self.data = json.loads(db_episodes.get(self.id.encode()))
         else:
             self.id = str(get_num('maxEpId'))
             if bili_epid:
@@ -349,7 +361,7 @@ class Episode(object):
     def log(func):
         def wrapper(self, *args, **kw):
             start_time = time.time()
-            onstart = lambda: self._print('%s start' % func.__name__)
+            def onstart(): return self._print('%s start' % func.__name__)
             ret = func(self, *args, onstart=onstart, **kw)
             end_time = time.time()
             if ret == DONE_MARK:
@@ -360,8 +372,10 @@ class Episode(object):
             return ret
         return wrapper
 
-    def _print(self, obj):
-        print('[%s>%s]:' % (self.data['seasonId'], self.id), obj)
+    def _print(self, obj, level=logging.INFO):
+        msg = '[%s>%s]: ' % (self.data['seasonId'], self.id) + str(obj)
+        print(msg)
+        logging.log(level, msg)
 
     def get_data_from_bili(self, epid):
         info = bangumi.get_episode_info(epid=epid)
@@ -376,7 +390,7 @@ class Episode(object):
             'hasNext': info['epInfo']['hasNext'],
             'title': info['epInfo']['title']
         }
-    
+
     def get_data_from_sakura(self, epid):
         info = download_sakura.get_episode_info(epid)
         return {
@@ -449,7 +463,7 @@ class Episode(object):
                     self.data['info']['video'], self.download_path
                 )
         except Exception as e:
-            print(e)
+            self._print(e)
             self.set_data('status', 'download_failed')
             return FAIL_MARK
         self.set_data('status', 'downloaded')
@@ -537,7 +551,7 @@ class Episode(object):
             self.to_image()
             self.insert_into_storage()
         except Exception as e:
-            print(e)
+            self._print(e)
             self.set_data('status', 'process_failed')
             return FAIL_MARK
         self.set_data('status', 'finished')
