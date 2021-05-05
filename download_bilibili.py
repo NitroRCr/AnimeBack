@@ -128,7 +128,8 @@ def combine_video(epid, down_path):
     filelist = open(os.path.join(down_path, 'filelist.txt'), 'w')
     num = 1
     while os.path.exists(os.path.join(down_path, 'part-%d.flv' % num)):
-        filelist.write(os.path.join(down_path, 'part-%d.flv' % num) + '\n')
+        filename = os.path.join(down_path, 'part-%d.flv' % num)
+        filelist.write('file "%s"\n' % filename)
         num += 1
     subprocess.run(['ffmpeg', '-f', 'concat', '-i', os.path.join(down_path, 'filelist.txt'), '-c', 'copy', os.path.join(down_path, 'video.flv')])
     num = 1

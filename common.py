@@ -190,7 +190,7 @@ class Season:
                 'cover': info['cover']
             },
             # 链接不一定正确，需实测
-            "wikiLink": "https://mzh.moegirl.org.cn/" + info['title'],
+            "wikiLink": "https://zh.moegirl.org.cn/" + info['title'],
             "shortIntro": info['evaluate']
         }
         request.urlretrieve(info['cover'], path.join(COVER_DIR, self.id))
@@ -206,7 +206,7 @@ class Season:
                 'cover': info['cover']
             },
             # 链接不一定正确，需实测
-            'wikiLink': "https://mzh.moegirl.org.cn/" + info['name'],
+            'wikiLink': "https://zh.moegirl.org.cn/" + info['name'],
             'shortIntro': info['evaluate']
         }
         request.urlretrieve(info['cover'], path.join(COVER_DIR, self.id))

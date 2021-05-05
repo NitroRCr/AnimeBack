@@ -80,7 +80,7 @@ gunicorn -w 4 -b 127.0.0.1:4000 app:flask_app
 - [x] ~~支持`Xception`预训练模型与`PCA`降维~~
 - [ ] 训练更符合需求的模型
 - [ ] 实现对op/ed的优化
-- [x] 自动从[樱花动漫](http://www.yhdm.so/)下载
+- [x] ~~自动从[樱花动漫](http://www.yhdm.so/)下载~~
 - [ ] 开放搜索API
 
 ## Thanks · 鸣谢
