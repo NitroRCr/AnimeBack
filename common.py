@@ -735,9 +735,9 @@ def get_status():
     presets = frame_box.get_presets_status()
     for preset_name in presets:
         preset = presets[preset_name]
-        season = seasons[season_id]
         preset['seasonIds'] = []
         for season_id in seasons:
+            season = seasons[season_id]
             if preset_name in season['finishedPresets']:
                 preset['seasonIds'].append(season_id)
         preset['seasonIds'].sort(key=sort_key)

@@ -144,3 +144,4 @@ def combine_video(epid, down_path):
     while os.path.exists(os.path.join(down_path, 'part-%d.flv' % num)):
         os.remove(os.path.join(down_path, 'part-%d.flv' % num))
         num += 1
+    os.remove(os.path.join(down_path, 'filelist.txt'))
