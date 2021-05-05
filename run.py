@@ -245,8 +245,9 @@ def process():
                 season.add_episode(ep_dirname)
 
         season.episodes.sort(key=lambda ep: sort_key(ep.id))
-        if season.process() != HAS_ERR_MARK:
-            proc_list_pop(0)
+        proc_list_pop(0)
+        if season.process() == HAS_ERR_MARK:
+            proc_list_push(season_id)
 
 
 def train_pca():

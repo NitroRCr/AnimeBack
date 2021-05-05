@@ -9,13 +9,14 @@ import re
 
 import subprocess
 
+
 def get_play_list(aid, cid, settings):
     url_api = 'https://api.bilibili.com/x/player/playurl?cid={}&avid={}&qn={}'.format(
         cid, aid, settings['quality'])
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
         # 登录B站后复制一下cookie中的SESSDATA字段,有效期1个月
-        'Cookie': 'SESSDATA=%s'%settings['SESSDATA'],
+        'Cookie': 'SESSDATA=%s' % settings['SESSDATA'],
         'Host': 'api.bilibili.com'
     }
     html = requests.get(url_api, headers=headers).json()
@@ -30,6 +31,7 @@ def get_play_list(aid, cid, settings):
         video_list.append(i['url'])
     print('video list:', video_list)
     return video_list
+
 
 def download_bilibili_video(epid, down_path, settings):
     ep_url = 'https://www.bilibili.com/bangumi/play/ep' + str(epid)
@@ -55,10 +57,10 @@ def download_bilibili_video(epid, down_path, settings):
     # 1.如果只下载当前ep
     try:
         item = [ep_info['epInfo']['aid'], ep_info['epInfo']['cid'],
-                            str(ep_info['epInfo']['cid'])]
+                str(ep_info['epInfo']['cid'])]
     except:
         item = [ep_info['epInfo']['aid'], ep_info['epInfo']['cid'],
-                            str(ep_info['epInfo']['index'])]
+                str(ep_info['epInfo']['index'])]
 
     # qn参数就是视频清晰度
     # 可选值：
@@ -95,6 +97,7 @@ def download_bilibili_video(epid, down_path, settings):
           (end_time - start_time, int(end_time - start_time) / 60))
     return 0
 
+
 def down_video(video_list, title, start_url, down_path):
     num = 1
     print('[正在下载]:' + title)
@@ -119,19 +122,24 @@ def down_video(video_list, title, start_url, down_path):
             os.makedirs(down_path)
         # 开始下载
         if len(video_list) > 1:
-            urllib.request.urlretrieve(url=i, filename=os.path.join(down_path, 'part-%d.flv'%num))  # 写成mp4也行  title + '-' + num + '.flv'
+            urllib.request.urlretrieve(url=i, filename=os.path.join(
+                down_path, 'part-%d.flv' % num))  # 写成mp4也行  title + '-' + num + '.flv'
         else:
-            urllib.request.urlretrieve(url=i, filename=os.path.join(down_path, 'video.flv'))  # 写成mp4也行  title + '-' + num + '.flv'
+            urllib.request.urlretrieve(url=i, filename=os.path.join(
+                down_path, 'video.flv'))  # 写成mp4也行  title + '-' + num + '.flv'
         num += 1
+
 
 def combine_video(epid, down_path):
     filelist = open(os.path.join(down_path, 'filelist.txt'), 'w')
     num = 1
     while os.path.exists(os.path.join(down_path, 'part-%d.flv' % num)):
         filename = os.path.join(down_path, 'part-%d.flv' % num)
-        filelist.write('file "%s"\n' % filename)
+        filelist.write("file %s\n" % 'part-%d.flv' % num)
         num += 1
-    subprocess.run(['ffmpeg', '-f', 'concat', '-i', os.path.join(down_path, 'filelist.txt'), '-c', 'copy', os.path.join(down_path, 'video.flv')])
+    filelist.close()
+    subprocess.run(['ffmpeg', '-f', 'concat', '-i', os.path.join(
+        down_path, 'filelist.txt'), '-c', 'copy', os.path.join(down_path, 'video.flv')])
     num = 1
     while os.path.exists(os.path.join(down_path, 'part-%d.flv' % num)):
         os.remove(os.path.join(down_path, 'part-%d.flv' % num))

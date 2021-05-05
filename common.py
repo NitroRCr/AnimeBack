@@ -174,7 +174,7 @@ class Season:
                 self._print('%s takes %.2fs' % (func.__name__,
                                                 end_time - start_time))
             elif ret == FAIL_MARK:
-                self._print('%s failed' % func.__name__)
+                self._print('%s failed' % func.__name__, logging.ERROR)
             elif ret == SKIP_MARK:
                 self._print('%s skiped' % func.__name__)
             return ret
@@ -368,7 +368,7 @@ class Episode(object):
                 self._print('%s takes %.2fs' % (func.__name__,
                                                 end_time - start_time))
             elif ret == FAIL_MARK:
-                self._print('%s failed' % func.__name__)
+                self._print('%s failed' % func.__name__, logging.ERROR)
             return ret
         return wrapper
 
@@ -463,7 +463,7 @@ class Episode(object):
                     self.data['info']['video'], self.download_path
                 )
         except Exception as e:
-            self._print(e)
+            self._print(e, level=logging.ERROR)
             self.set_data('status', 'download_failed')
             return FAIL_MARK
         self.set_data('status', 'downloaded')
@@ -551,7 +551,7 @@ class Episode(object):
             self.to_image()
             self.insert_into_storage()
         except Exception as e:
-            self._print(e)
+            self._print(e, level=logging.ERROR)
             self.set_data('status', 'process_failed')
             return FAIL_MARK
         self.set_data('status', 'finished')
