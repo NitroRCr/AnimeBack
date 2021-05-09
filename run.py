@@ -31,6 +31,7 @@ CONF_TEMPLATES = {
         "milvus_host": "127.0.0.1",
         "milvus_port": 19530,
         "keras_cuda": False,
+        "ffmpeg_cuda": False,
         "downloadDir": "download",
         "videoOutDir": os.path.join("static", "video"),
         "imgTmpDir": "tmp_images",

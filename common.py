@@ -72,6 +72,7 @@ IMG_TMP_DIR = config['imgTmpDir']
 PROC_CONF = config['process']
 COVER_DIR = config['coverDir']
 ENABLE_CUDA = config['keras_cuda']
+FFMPEG_CUDA = config['ffmpeg_cuda']
 
 logging.basicConfig(
     filename=config['logFile'],
@@ -459,12 +460,20 @@ class Episode(object):
                         'SESSDATA': self.data['SESSDATA']
                     })
             elif self.data['type'] == 'episode/sakura':
-                download_sakura.download(
-                    self.data['info']['video'], self.download_path
-                )
+                try:
+                    download_sakura.download(
+                        self.data['info']['video'], self.download_path
+                    )
+                except Exception as e:
+                    self._print(e, level=logging.WARNING)
+                    video = download_sakura.get_video(self.data['info']['id'])
+                    self.data['info']['video'] = video
+                    download_sakura.download(video, self.download_path)
+
         except Exception as e:
             self._print(e, level=logging.ERROR)
             self.set_data('status', 'download_failed')
+            raise e
             return FAIL_MARK
         self.set_data('status', 'downloaded')
         create_mark(path.join(self.download_path, 'done'))
@@ -492,6 +501,9 @@ class Episode(object):
             os.makedirs(self.video_out_path)
         if path.exists(out_video):
             os.remove(out_video)
+        if FFMPEG_CUDA:
+            subprocess.run("ffmpeg -hwaccel cuvid -c:v h264_cuvid -i %s -acodec aac -b:a 64k -ar 44100 -c:v h264_nvenc -cq %d -y %s -vf scale=-2:%d"
+                       % (video, PROC_CONF['crf'], out_video, PROC_CONF['resolution']), check=True, shell=True)
         subprocess.run("ffmpeg -i %s -vcodec libx264 -acodec aac -b:a 64k -ar 44100 -crf %d -tune animation -vf scale=-2:%d %s -y"
                        % (video, PROC_CONF['crf'], PROC_CONF['resolution'], out_video), check=True, shell=True)  # 压缩视频
         create_mark(path.join(self.video_out_path, 'done'))

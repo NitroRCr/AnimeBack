@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from numpy.compat import unicode
 import os
 
-host = 'www.yhdm.so'
+host = 'yhdm.so'
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36'
 }
@@ -43,9 +43,23 @@ def get_episode_info(ep_id):
     episode['name'] = page.select('.gohome.l h1 span')[0].text
     episode['fullName'] = page.select('.gohome.l h1 a')[
         0].text + episode['name']
-    episode['video'] = re.match(
-        r'^(.*)\$', page.select('#playbox')[0]['data-vid']).group(1)
+    vid = page.select('#playbox')[0]['data-vid']
+    matched = re.match(r'^(.*)\$(\w+)$', vid)
+    if matched.group(2) == 'mp4':
+        episode['video'] = matched.group(1)
+    elif matched.group(2) == 'qzz':
+        episode['video'] = get_qzone_video(matched.group(1))
+    else:
+        raise ValueError('unsupported video')
     return episode
+
+
+def get_qzone_video(vid):
+    resp = requests.get('http://tup.%s/qzone.php?url=%s' % (host, vid), headers=headers)
+    resp.encoding = 'utf-8'
+    page = BeautifulSoup(resp.text, features='html.parser')
+    script = str(page.select('body > script')[0])
+    return re.search(r'url: "(.*)"', script).group(1)
 
 
 def download(url, path):
@@ -54,3 +68,6 @@ def download(url, path):
     filename = os.path.join(path, 'video.mp4')
     print('start download from %s to %s' % (url, filename))
     urlretrieve(url, filename)
+
+def get_video(ep_id):
+    return get_episode_info(ep_id)['video']
