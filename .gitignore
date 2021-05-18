@@ -4,6 +4,7 @@
 /db/
 /tmp_images/
 /pca/
+/saved_models/
 
 # IDE
 .vscode/

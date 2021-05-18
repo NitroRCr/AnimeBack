@@ -159,30 +159,34 @@ class App:
 
     def search_pic(self, qid, tag, crop=False, preset=None):
         origin_path = os.path.join(self.IMAGE_SAVE_PATH, str(qid))
+        img_path = os.path.join(self.IMAGE_TMP_PATH, '%d.jpg' % get_num('tmpNum'))
+        if not os.path.exists(self.IMAGE_TMP_PATH):
+            os.mkdir(self.IMAGE_TMP_PATH)
         if crop:
-            if not os.path.exists(self.IMAGE_TMP_PATH):
-                os.mkdir(self.IMAGE_TMP_PATH)
-            img_path = os.path.join(self.IMAGE_TMP_PATH, '%d.jpg' % qid)
             self.crop_image(origin_path, img_path)
         else:
-            img_path = origin_path
+            self.cvt_jpg(origin_path, img_path)
         ret = search(img_path, preset=preset, tag=tag)
         return ret
 
     def get_saved_res(self, qid):
         try:
-            f = open(os.path.join(self.RES_SAVE_PATH, "%d.json"%qid))
+            f = open(os.path.join(self.RES_SAVE_PATH, "%d.json" % qid))
         except IOError:
             return -1
         response = json.loads(f.read())
         f.close()
         return response
+
     def save_res(self, response):
         if not os.path.exists(self.RES_SAVE_PATH):
             os.makedirs(self.RES_SAVE_PATH)
-        f = open(os.path.join(self.RES_SAVE_PATH, "%d.json"%response['qid']), 'w')
+        f = open(os.path.join(self.RES_SAVE_PATH, "%d.json" % response['qid']), 'w')
         f.write(json.dumps(response))
         f.close()
+
+    def cvt_jpg(self, in_path, out_path):
+        subprocess.run(['ffmpeg', '-i', in_path, out_path])
     
 
     def save_image(self, image, qid):

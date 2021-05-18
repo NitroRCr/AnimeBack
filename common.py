@@ -473,7 +473,6 @@ class Episode(object):
         except Exception as e:
             self._print(e, level=logging.ERROR)
             self.set_data('status', 'download_failed')
-            raise e
             return FAIL_MARK
         self.set_data('status', 'downloaded')
         create_mark(path.join(self.download_path, 'done'))
@@ -574,7 +573,7 @@ class Episode(object):
 
     def add_to_trainer(self):
         frame_group = FrameGroup(self.img_tmp_path, PROC_CONF['rate'])
-        frame_group.filte_sim(PROC_CONF['filteSimlity'])
+        frame_group.filte_sim(0.75)
         load_trainer()
         pca_trainer.add_frames(frame_group.random_select(
             config['trainPCA']['selectNum']))

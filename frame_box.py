@@ -7,11 +7,13 @@ from bilibili_api import bangumi
 from milvus import Milvus, IndexType, MetricType, Status
 #from models.vgg16 import VGGNet
 #from models.xception import XceptionNet
-from models.densenet169 import DenseNet
+#from models.densenet169 import DenseNet
 #from models.resnet50 import ResNet50
 #from models.efficientnet_b4 import EfficientNetB4
 #from models.efficientnet_b6 import EfficientNetB6
 #from models.resnet50v2 import ResNet50V2
+#from models import resnet_feat
+from models import resnet_flat
 from tensorflow.python.keras.backend import set_session
 import tensorflow as tf
 import numpy as np
@@ -20,15 +22,18 @@ from os import path
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import scale
 import joblib
+import math as m
 
 model_classes = {
     #'VGG16': VGGNet,
     #'Xception': XceptionNet,
-    'DenseNet': DenseNet,
+    #'DenseNet': DenseNet,
     #'ResNet50': ResNet50,
     #'ResNet50V2': ResNet50V2,
     #'EfficientNetB4': EfficientNetB4,
     #'EfficientNetB6': EfficientNetB6,
+    #'ResNetFeat': resnet_feat.Model,
+    'ResNetFlat': resnet_flat.Model
 }
 presets_info = [
     {
@@ -53,30 +58,8 @@ presets_info = [
         'ifscale': False
     },
     {
-        'name': 'DenseNet',
-        'enable': False,
-        'model': 'DenseNet',
-        'coll_param': {
-            'collection_name': 'AnimeBack_DenseNet',
-            'dimension': 1664,
-            'index_file_size': 2048,
-            'metric_type': MetricType.L2
-        },
-        'index_type': IndexType.IVF_PQ,
-        'index_param': {
-            "m": 52,
-            "nlist": 2048
-        },
-        'extract_dim': 1664,
-        'db_path': 'db/frames_DenseNet',
-        'search_param': {
-            'nprobe': 24
-        },
-        'ifscale': False
-    },
-    {
         'name': 'DenseNet_PCA',
-        'enable': True,
+        'enable': False,
         'model': 'DenseNet',
         'coll_param': {
             'collection_name': 'AnimeBack_DenseNet_PCA',
@@ -91,7 +74,6 @@ presets_info = [
         'extract_dim': 1664,
         'db_path': 'db/frames_DenseNet_PCA',
         'search_param': {
-            'm': 26,
             'nprobe': 16
         },
         'ifscale': False,
@@ -116,6 +98,50 @@ presets_info = [
         'db_path': 'db/frames_ResNet50',
         'search_param': {
             'nprobe': 16
+        },
+        'ifscale': False
+    },
+    {
+        'name': 'ResNetFlat',
+        'enable': True,
+        'model': 'ResNetFlat',
+        'coll_param': {
+            'collection_name': 'AnimeBack_ResNetFlat',
+            'dimension': 256,
+            'index_file_size': 2048,
+            'metric_type': MetricType.L2
+        },
+        'index_type': IndexType.IVF_PQ,
+        'index_param': {
+            "m": 16,
+            "nlist": 4096
+        },
+        'extract_dim': 256,
+        'db_path': 'db/frames_ResNetFlat',
+        'search_param': {
+            'nprobe': 64
+        },
+        'ifscale': False
+    },
+    {
+        'name': 'ResNetFeat',
+        'enable': True,
+        'model': 'ResNetFeat',
+        'coll_param': {
+            'collection_name': 'AnimeBack_ResNetFeat',
+            'dimension': 256,
+            'index_file_size': 2048,
+            'metric_type': MetricType.L2
+        },
+        'index_type': IndexType.IVF_PQ,
+        'index_param': {
+            "m": 16,
+            "nlist": 4096
+        },
+        'extract_dim': 256,
+        'db_path': 'db/frames_ResNetFeat',
+        'search_param': {
+            'nprobe': 64
         },
         'ifscale': False
     }
@@ -191,6 +217,7 @@ class FrameBox(object):
             set_session(sess)
         
         self.BUFFER_MAX_LEN = 10000
+        self.BATCH_SIZE = 32
         self.frame_buffer = []
         self.milvus = None
         self.curr_presets = []
@@ -211,10 +238,16 @@ class FrameBox(object):
             models[preset.model] = model_classes[preset.model]()
         return models
 
-    def get_feats(self, img_path):
+    def get_feat(self, img_path):
         feats = {}
         for key in self.models:
             feats[key] = self.models[key].extract_feat(img_path)
+        return feats
+
+    def get_feats(self, img_paths):
+        feats = {}
+        for key in self.models:
+            feats[key] = self.models[key].extract_feats(img_paths)
         return feats
 
     def create_collection(self):
@@ -299,7 +332,7 @@ class FrameBox(object):
         if not preset:
             raise ValueError('Invalid preset name')
         vectors = np.zeros((1, preset.extract_dim), dtype=float)
-        vectors[0] = self.get_feats(img_path)[preset.model]
+        vectors[0] = self.get_feat(img_path)[preset.model]
         if preset.ifscale:
             vectors = scale(vectors, axis=1)
         if preset.pca_enabled:
@@ -322,16 +355,29 @@ class FrameBox(object):
     def insert(self, frames, epid, preset_names):
         t0 = time.time()
         print('extract feat start')
+        length = len(frames)
         self.curr_presets = [
             preset for preset in self.presets if preset.name in preset_names]
-        for frame in frames:
-            self.append_to_buffer(self.get_feats(frame['file']), {
-                'epid': epid,
-                'time': frame['time']
-            })
+        paths = [f['file'] for f in frames]
+        feats = None
+        for i in range(0, length, self.BATCH_SIZE):
+            end = min(i + self.BATCH_SIZE, length)
+            if feats:
+                fts = self.get_feats(paths[i:end])
+                for key in fts:
+                    feats[key] += fts[key]
+            else:
+                feats = self.get_feats(paths[i:end])
+        
         t = time.time() - t0
-        fps = len(frames)/t
+        fps = length/t
         print('extract feat takes %.2fs, fps=%.2f' % (t, fps))
+
+        for i in range(length):
+            self.append_to_buffer(feats[i], {
+                'epid': epid,
+                'time': frames[i]['time']
+            })
         self.flush()
 
     def get_presets_status(self):

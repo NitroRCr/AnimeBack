@@ -58,7 +58,8 @@ CONF_TEMPLATES = {
             },
             "default": {
                 "presets": [
-                    "Xception_PCA"
+                    "ResNetFlat",
+                    "ResNetFeat"
                 ],
                 "tag": "$seasonId",
                 "episodes": "^:$",
@@ -89,7 +90,8 @@ DIRS = [
     'download',
     'tmp_images',
     'db',
-    'pca'
+    'pca',
+    'saved_models'
 ]
 
 

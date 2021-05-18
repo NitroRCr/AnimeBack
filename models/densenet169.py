@@ -22,3 +22,12 @@ class DenseNet:
         feat = self.model.predict(img)
         norm_feat = feat[0]/LA.norm(feat[0])
         return norm_feat
+
+
+    def extract_feats(self, img_paths):
+        num = len(img_paths)
+        imgs = np.zeros((num,) + self.target_shape + (3,))
+        for i in range(num):
+            imgs[i] = image.img_to_array(img_paths[i])
+        feats = self.model.predict(imgs)
+        return feats/LA.norm(feats, axis=1)
