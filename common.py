@@ -501,9 +501,9 @@ class Episode(object):
         if path.exists(out_video):
             os.remove(out_video)
         if FFMPEG_CUDA:
-            subprocess.run("ffmpeg -hwaccel cuvid -c:v h264_cuvid -i %s -acodec aac -b:a 64k -ar 44100 -c:v h264_nvenc -cq %d -y %s -vf scale=-2:%d"
+            subprocess.run("ffmpeg -hwaccel cuvid -c:v h264_cuvid -i %s -acodec aac -b:a 64k -ar 44100 -c:v h264_nvenc -cq %d -y %s -vf scale=-2:%d -hide_banner"
                        % (video, PROC_CONF['crf'], out_video, PROC_CONF['resolution']), check=True, shell=True)
-        subprocess.run("ffmpeg -i %s -vcodec libx264 -acodec aac -b:a 64k -ar 44100 -crf %d -tune animation -vf scale=-2:%d %s -y"
+        subprocess.run("ffmpeg -i %s -vcodec libx264 -acodec aac -b:a 64k -ar 44100 -crf %d -tune animation -vf scale=-2:%d %s -y -hide_banner"
                        % (video, PROC_CONF['crf'], PROC_CONF['resolution'], out_video), check=True, shell=True)  # 压缩视频
         create_mark(path.join(self.video_out_path, 'done'))
         self._print('compressed')

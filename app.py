@@ -17,8 +17,10 @@ import cv2
 import numpy as np
 from flask.helpers import send_file
 flask_app = None
+
+
 class App:
-            
+
     def __init__(self):
         self.hash_buffer = []
         self.IMAGE_TMP_PATH = os.path.join("static", "img", "tmp")
@@ -39,7 +41,8 @@ class App:
         return ret
 
     def create_flask(self):
-        flask = Flask(__name__, instance_relative_config=True, static_url_path='')
+        flask = Flask(__name__, instance_relative_config=True,
+                      static_url_path='')
 
         @flask.route('/search', methods=['GET', 'POST'])
         def search():
@@ -73,22 +76,25 @@ class App:
                         self.save_image(image_file, qid)
                         response['pic_url'] = '/img/upload/%d' % qid
                         try:
-                            response['result'] = self.search_pic(qid, tag=tag, crop=crop, preset=preset)
+                            response['result'] = self.search_pic(
+                                qid, tag=tag, crop=crop, preset=preset)
                         except ValueError:
                             abort(400)
                     elif method == "url":
                         matched = re.match(r'((https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|])',
-                            request.form['url'])
+                                           request.form['url'])
                         if matched:
                             try:
-                                save_path = os.path.join(self.IMAGE_SAVE_PATH, str(qid))
-                                urllib.request.urlretrieve(matched.group(1), filename=save_path)
+                                save_path = os.path.join(
+                                    self.IMAGE_SAVE_PATH, str(qid))
+                                urllib.request.urlretrieve(
+                                    matched.group(1), filename=save_path)
                             except urllib.error.HTTPError:
                                 return {
                                     "error_code": 400,
                                     "error_msg": "无效的图像链接"
                                 }
-                            response['pic_url'] = "/img/upload/%d"%qid
+                            response['pic_url'] = "/img/upload/%d" % qid
                             response['result'] = self.search_pic(save_path)
                         else:
                             return {
@@ -100,7 +106,7 @@ class App:
                     self.save_res(response)
             return response
 
-        @flask.route('/frame', methods = ['POST'])
+        @flask.route('/frame', methods=['POST'])
         def get_frame():
             epid = request.form['epid']
             time = float(request.form['time'])
@@ -112,14 +118,19 @@ class App:
             if os.path.exists(video) == False:
                 abort(400)
             try:
-                subprocess.run('ffmpeg -ss %.1f -i %s -f image2 -frames:v 1 %s -y' % (time, video, tmp_img), shell=True, check=True)
+                subprocess.run(
+                    'ffmpeg -ss %.1f -i %s -f image2 -frames:v 1 %s -y -hide_banner -loglevel error'
+                    % (time, video, tmp_img),
+                    shell=True,
+                    check=True
+                )
             except subprocess.CalledProcessError as e:
                 print(e)
                 abort(400)
             f = open(tmp_img)
             return send_file(f, mimetype='image/jpg')
 
-        @flask.route('/', methods = ['GET'])
+        @flask.route('/', methods=['GET'])
         def getIndex():
             return flask.send_static_file('index.html')
 
@@ -159,7 +170,8 @@ class App:
 
     def search_pic(self, qid, tag, crop=False, preset=None):
         origin_path = os.path.join(self.IMAGE_SAVE_PATH, str(qid))
-        img_path = os.path.join(self.IMAGE_TMP_PATH, '%d.jpg' % get_num('tmpNum'))
+        img_path = os.path.join(self.IMAGE_TMP_PATH,
+                                '%d.jpg' % get_num('tmpNum'))
         if not os.path.exists(self.IMAGE_TMP_PATH):
             os.mkdir(self.IMAGE_TMP_PATH)
         if crop:
@@ -181,13 +193,14 @@ class App:
     def save_res(self, response):
         if not os.path.exists(self.RES_SAVE_PATH):
             os.makedirs(self.RES_SAVE_PATH)
-        f = open(os.path.join(self.RES_SAVE_PATH, "%d.json" % response['qid']), 'w')
+        f = open(os.path.join(self.RES_SAVE_PATH,
+                              "%d.json" % response['qid']), 'w')
         f.write(json.dumps(response))
         f.close()
 
     def cvt_jpg(self, in_path, out_path):
-        subprocess.run(['ffmpeg', '-i', in_path, out_path])
-    
+        subprocess.run(['ffmpeg', '-i', in_path, out_path,
+                        '-hide_banner', '-loglevel', 'error'])
 
     def save_image(self, image, qid):
         extension = os.path.splitext(image.filename)[-1]
@@ -196,25 +209,26 @@ class App:
         now_num = qid
         if not os.path.exists(self.IMAGE_SAVE_PATH):
             os.makedirs(self.IMAGE_SAVE_PATH)
-        save_path = os.path.join(self.IMAGE_SAVE_PATH, '%d'%(now_num))
+        save_path = os.path.join(self.IMAGE_SAVE_PATH, '%d' % (now_num))
         image.save(save_path)
 
     def crop_image(self, in_path, out_path):
         image = cv2.imread(in_path)
         height, width, channels = image.shape
         # Convert image to grayscale
-        imgray = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
+        imgray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         # Set threshold
         #th1 = cv2.adaptiveThreshold(imgray,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,1023,0)
-        _,th2 = cv2.threshold(imgray,8,255,cv2.THRESH_BINARY)
-        contours, hierarchy = cv2.findContours(th2,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+        _, th2 = cv2.threshold(imgray, 8, 255, cv2.THRESH_BINARY)
+        contours, hierarchy = cv2.findContours(
+            th2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         # Find with the largest rectangle
         areas = [cv2.contourArea(contour) for contour in contours]
         max_index = np.argmax(areas)
         cnt = contours[max_index]
-        x,y,w,h = cv2.boundingRect(cnt)
+        x, y, w, h = cv2.boundingRect(cnt)
 
         # Ensure bounding rect should be at least 16:9 or taller
         # For images that is not ~16:9
@@ -222,7 +236,7 @@ class App:
         if abs(width / height - 16 / 9) < 0.03 and (w / h - 16 / 9) > 0.03:
             # increase top and bottom margin
             newHeight = w / 16 * 9
-            y = y - (newHeight - h ) / 2
+            y = y - (newHeight - h) / 2
             h = newHeight
 
         # ensure the image has dimension
@@ -236,8 +250,9 @@ class App:
         h = 1 if h < 1 else h
 
         # Crop with the largest rectangle
-        crop = image[y:y+h,x:x+w]
+        crop = image[y:y+h, x:x+w]
         cv2.imwrite(out_path, crop)
+
 
 app = App()
 if __name__ == '__main__':

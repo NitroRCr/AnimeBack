@@ -167,9 +167,9 @@ def process():
                 season.add_episode(ep_dirname)
 
         season.episodes.sort(key=lambda ep: sort_key(ep.id))
-        proc_list_pop(0)
         if season.process() == HAS_ERR_MARK:
             failed.append(season.id)
+        proc_list_pop(0)
     for i in failed:
         proc_list_push(i)
 

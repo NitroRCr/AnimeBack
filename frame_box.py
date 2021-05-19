@@ -245,10 +245,13 @@ class FrameBox(object):
         return feats
 
     def get_feats(self, img_paths):
-        feats = {}
+        length = len(img_paths)
+        all_feats = [{} for i in range(length)]
         for key in self.models:
-            feats[key] = self.models[key].extract_feats(img_paths)
-        return feats
+            feats = self.models[key].extract_feats(img_paths)
+            for i in range(length):
+                all_feats[i][key] = feats[i]
+        return all_feats
 
     def create_collection(self):
         collections = self.milvus.list_collections()[1]
@@ -359,16 +362,10 @@ class FrameBox(object):
         self.curr_presets = [
             preset for preset in self.presets if preset.name in preset_names]
         paths = [f['file'] for f in frames]
-        feats = None
+        feats = []
         for i in range(0, length, self.BATCH_SIZE):
             end = min(i + self.BATCH_SIZE, length)
-            if feats:
-                fts = self.get_feats(paths[i:end])
-                for key in fts:
-                    feats[key] += fts[key]
-            else:
-                feats = self.get_feats(paths[i:end])
-        
+            feats += self.get_feats(paths[i:end])
         t = time.time() - t0
         fps = length/t
         print('extract feat takes %.2fs, fps=%.2f' % (t, fps))

@@ -40,6 +40,8 @@ class EmbeddingModel:
     def extract_feats(self, img_paths):
         num = len(img_paths)
         imgs = np.zeros((num,) + self.target_shape + (3,))
+        feats = []
         for i in range(num):
             imgs[i] = self.preprocess_image(img_paths[i])
-        return self.model(self.preprocess_input(imgs))
+        feats = [i.numpy().tolist() for i in self.model(self.preprocess_input(imgs))]
+        return feats
