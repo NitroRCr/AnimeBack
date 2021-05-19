@@ -134,6 +134,7 @@ def download_sakura():
 
 
 def process():
+    failed = []
     while proc_list_get(0):
         season_id = proc_list_get(0)
         season_dir = os.path.join(config['imgTmpDir'], season_id)
@@ -168,7 +169,9 @@ def process():
         season.episodes.sort(key=lambda ep: sort_key(ep.id))
         proc_list_pop(0)
         if season.process() == HAS_ERR_MARK:
-            proc_list_push(season_id)
+            failed.append(season.id)
+    for i in failed:
+        proc_list_push(i)
 
 
 def train_pca():

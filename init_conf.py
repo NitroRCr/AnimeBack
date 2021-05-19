@@ -20,7 +20,8 @@ CONF_TEMPLATES = {
                 "SESSDATA": "",
                 "quality": 64,
                 "presets": [
-                    "Xception_PCA"
+                    "ResNetFlat",
+                    "ResNetFeat"
                 ],
                 "tag": "$seasonId",
                 "episodes": "^:$",

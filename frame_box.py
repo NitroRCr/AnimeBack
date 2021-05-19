@@ -12,7 +12,7 @@ from milvus import Milvus, IndexType, MetricType, Status
 #from models.efficientnet_b4 import EfficientNetB4
 #from models.efficientnet_b6 import EfficientNetB6
 #from models.resnet50v2 import ResNet50V2
-#from models import resnet_feat
+from models import resnet_feat
 from models import resnet_flat
 from tensorflow.python.keras.backend import set_session
 import tensorflow as tf
@@ -32,7 +32,7 @@ model_classes = {
     #'ResNet50V2': ResNet50V2,
     #'EfficientNetB4': EfficientNetB4,
     #'EfficientNetB6': EfficientNetB6,
-    #'ResNetFeat': resnet_feat.Model,
+    'ResNetFeat': resnet_feat.Model,
     'ResNetFlat': resnet_flat.Model
 }
 presets_info = [
