@@ -10,7 +10,7 @@ list_host = '121.4.190.96:9991'
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36'
 }
-js_url = 'http://d.gqyy8.com:8077/ne2/s%d.js?1622904201'
+js_url = 'http://d.gqyy8.com:8077/ne2/s%s.js?1622904201'
 
 cached = {}
 
@@ -27,9 +27,10 @@ def get_resp(url, with_try=(1, 3, 5, 10, 30)):
     return resp
 
 def get_season_info(season_id):
+    season_id = str(season_id)
     if season_id in cached:
         return cached[season_id]
-    resp = get_resp('http://%s/acg/%d/' % (host, season_id))
+    resp = get_resp('http://%s/acg/%s/' % (host, season_id))
     if re.search(r'该链接已失效|无此片源', resp.text):
         return None
     page = BeautifulSoup(resp.text, features='html.parser')
@@ -50,7 +51,7 @@ def get_season_info(season_id):
     img = page.select('div.wrap > div.content.mb.clearfix > div.pic > img')[0]
     season['cover'] = img['data-original'].replace('http://', 'https://')
     season['evaluate'] = list(info_div.select('.desd .des2')[0].strings)[1]
-    season['episodes'] = {}
+    season['episodes'] = []
     tag_a = page.select('#stab_1_71 > ul > li > a')
     resp = get_resp(js_url % season_id)
     videos = find_videos(resp.text)
@@ -62,23 +63,25 @@ def get_season_info(season_id):
             continue
         if not re.search(r'\.mp4', str(videos[num])):
             continue
-        for url in videos:
+        for url in videos[num]:
             if re.search(r'\.mp4', url):
                 video = url
                 break
-        season['episodes'][num] = {
+        season['episodes'].append({
             'title': a.text,
             'video': url,
-            'id': season_id + '-' + num,
-            'name': season['name'] + ': ' + a.text
-        }
+            'id': '%s-%d' % (season_id, num),
+            'name': season['name'] + ': ' + a.text,
+        })
     cached[season_id] = season
     return season if season['episodes'] else None
 
 def get_episode_info(epid):
     season_id, ep_num = epid.split('-')
     season = get_season_info(season_id)
-    return season['episodes'][int(ep_num)]
+    for ep in season['episodes']:
+        if ep['id'] == epid:
+            return ep
 
 def find_videos(js):
     videos = {}

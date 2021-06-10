@@ -68,7 +68,7 @@ gunicorn -w 4 -b 127.0.0.1:4000 app:flask_app
 
 ## 技术实现
 
-- 通过[bilibili](https://www.bilibili.com/)(或[樱花动漫](http://www.yhdm.so/))的API，自动下载番剧，并初步保存番剧信息
+- 通过[bilibili](https://www.bilibili.com/)(或其他网站)的API，自动下载番剧，并初步保存番剧信息
 
 - 使用[ffmpeg](https://ffmpeg.org/about.html)压缩视频并转为mp4，放到网站静态目录下
 - 使用[ffmpeg](https://ffmpeg.org/about.html)，将视频以一定采样率转为图片，放到临时目录
@@ -78,7 +78,7 @@ gunicorn -w 4 -b 127.0.0.1:4000 app:flask_app
 ## To-do
 
 - [x] ~~支持`Xception`预训练模型与`PCA`降维~~
-- [x] 训练更符合需求的模型
+- [ ] 训练更符合需求的模型
 - [ ] 实现对op/ed的优化
 - [x] ~~自动从[樱花动漫](http://www.yhdm.so/)下载~~
 - [ ] 开放搜索API
@@ -86,7 +86,7 @@ gunicorn -w 4 -b 127.0.0.1:4000 app:flask_app
 ## Thanks · 鸣谢
 
 - 部分过程参考[以图搜番](https://gitee.com/tuxiaobei/find_video_by_pic#https://github.com/Henryhaohao/Bilibili_video_download)。部分思路来自[tuxiaobei](https://gitee.com/tuxiaobei)
-- 下载的部分参考[Bilibili_video_download](https://github.com/Henryhaohao/Bilibili_video_download)
+- 从B站下载的部分参考[Bilibili_video_download](https://github.com/Henryhaohao/Bilibili_video_download)
 - 自动裁剪图像黑边的实现，来源于[trace.moe](https://github.com/soruly/trace.moe)的`crop.py`
 - 使用了[Milvus](https://milvus.io)索引和搜索向量
 - 使用了各深度学习模型提取图像特征

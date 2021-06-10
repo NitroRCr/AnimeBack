@@ -7,7 +7,7 @@ from bilibili_api import bangumi
 from milvus import Milvus, IndexType, MetricType, Status
 #from models.vgg16 import VGGNet
 #from models.xception import XceptionNet
-#from models.densenet169 import DenseNet
+from models.densenet169 import DenseNet
 #from models.resnet50 import ResNet50
 #from models.efficientnet_b4 import EfficientNetB4
 #from models.efficientnet_b6 import EfficientNetB6
@@ -27,13 +27,13 @@ import math as m
 model_classes = {
     #'VGG16': VGGNet,
     #'Xception': XceptionNet,
-    #'DenseNet': DenseNet,
+    'DenseNet': DenseNet,
     #'ResNet50': ResNet50,
     #'ResNet50V2': ResNet50V2,
     #'EfficientNetB4': EfficientNetB4,
     #'EfficientNetB6': EfficientNetB6,
-    'ResNetFeat': resnet_feat.Model,
-    'ResNetFlat': resnet_flat.Model
+    #'ResNetFeat': resnet_feat.Model,
+    #'ResNetFlat': resnet_flat.Model
 }
 presets_info = [
     {
@@ -59,7 +59,7 @@ presets_info = [
     },
     {
         'name': 'DenseNet_PCA',
-        'enable': False,
+        'enable': True,
         'model': 'DenseNet',
         'coll_param': {
             'collection_name': 'AnimeBack_DenseNet_PCA',
@@ -69,12 +69,13 @@ presets_info = [
         },
         'index_type': IndexType.IVF_PQ,
         'index_param': {
-            "nlist": 2048
+            'm':16,
+            "nlist": 4096
         },
         'extract_dim': 1664,
         'db_path': 'db/frames_DenseNet_PCA',
         'search_param': {
-            'nprobe': 16
+            'nprobe': 64
         },
         'ifscale': False,
         'pca_model': 'pca/pca_densenet_416.m',
@@ -103,7 +104,7 @@ presets_info = [
     },
     {
         'name': 'ResNetFlat',
-        'enable': True,
+        'enable': False,
         'model': 'ResNetFlat',
         'coll_param': {
             'collection_name': 'AnimeBack_ResNetFlat',
@@ -125,7 +126,7 @@ presets_info = [
     },
     {
         'name': 'ResNetFeat',
-        'enable': True,
+        'enable': False,
         'model': 'ResNetFeat',
         'coll_param': {
             'collection_name': 'AnimeBack_ResNetFeat',
