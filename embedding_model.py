@@ -33,9 +33,8 @@ class EmbeddingModel:
 
     def extract_feat(self, img_path):
         img = self.preprocess_image(img_path)
-        print(img.shape)
         img = np.expand_dims(img, axis=0).copy()
-        return self.model(self.preprocess_input(img))
+        return self.model(self.preprocess_input(img))[0]
 
     def extract_feats(self, img_paths):
         num = len(img_paths)

@@ -26,8 +26,11 @@ class DenseNet:
 
     def extract_feats(self, img_paths):
         num = len(img_paths)
-        imgs = np.zeros((num,) + self.target_shape + (3,))
+        imgs = np.zeros((num,) + self.input_shape + (3,))
         for i in range(num):
-            imgs[i] = image.img_to_array(img_paths[i])
-        feats = self.model.predict(imgs)
-        return feats/LA.norm(feats, axis=1)
+            img = image.load_img(img_paths[i], target_size=(self.input_shape[0], self.input_shape[1]))
+            imgs[i] = image.img_to_array(img)
+        feats = self.model.predict(preprocess_input(imgs))
+        feats = feats/LA.norm(feats, axis=1)[:, None]
+        feats = [i.numpy().tolist() for i in feats]
+        return feats

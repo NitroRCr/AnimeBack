@@ -90,7 +90,7 @@ def download_bilibili():
             season.update_settings(settings)
         need_process = season.need_process()
         if need_process and season.need_download():
-            put_history('downloadBilibili', season.id)
+            put_history('downloadBilibili', season.data['info']['ssId'])
             season.download()
         if need_process:
             proc_list_push(season.id)
@@ -195,8 +195,10 @@ def main():
         return
     if sys.argv[1] == 'download-bilibili':
         download_bilibili()
+        restart()
     elif sys.argv[1] == 'download-sakura':
         download_sakura()
+        restart()
     elif sys.argv[1] == 'process':
         process()
     elif sys.argv[1] == 'train-pca':

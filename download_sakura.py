@@ -45,10 +45,13 @@ def get_episode_info(ep_id):
         0].text + episode['name']
     vid = page.select('#playbox')[0]['data-vid']
     matched = re.match(r'^(.*)\$(\w+)$', vid)
+    episode['urlType'] = matched.group(2)
     if matched.group(2) == 'mp4':
+        episode['downloadUrl'] = matched.group(1)
         episode['video'] = matched.group(1)
     elif matched.group(2) == 'qzz':
-        episode['video'] = get_qzone_video(matched.group(1))
+        episode['downloadUrl'] = get_qzone_video(vid)
+        episode['video'] = None
     else:
         raise ValueError('unsupported video')
     return episode
@@ -68,6 +71,3 @@ def download(url, path):
     filename = os.path.join(path, 'video.mp4')
     print('start download from %s to %s' % (url, filename))
     urlretrieve(url, filename)
-
-def get_video(ep_id):
-    return get_episode_info(ep_id)['video']

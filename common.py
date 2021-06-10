@@ -4,7 +4,7 @@ import os
 from ldb import LDB
 from bilibili_api import bangumi
 from download_bilibili import download_bilibili_video
-import download_sakura
+import sakura_like
 import re
 import subprocess
 import imagehash
@@ -198,7 +198,7 @@ class Season:
         set_refer('season/bilibili', season_id, self.id)
 
     def set_data_from_sakura(self, season_id):
-        info = download_sakura.get_season_info(season_id)
+        info = sakura_like.get_season_info(season_id)
         self.data = {
             'name': info['name'],
             'type': 'season/sakura',
@@ -233,7 +233,7 @@ class Season:
             return DONE_MARK
         elif self.data['type'] == 'season/sakura':
             season_id = self.data['info']['ssId']
-            info = download_sakura.get_season_info(season_id)
+            info = sakura_like.get_season_info(season_id)
             episodes = info['episodes'][start:end]
             onstart and onstart()
             for i in episodes:
@@ -393,15 +393,15 @@ class Episode(object):
         }
 
     def get_data_from_sakura(self, epid):
-        info = download_sakura.get_episode_info(epid)
+        info = sakura_like.get_episode_info(epid)
         return {
-            'name': info['fullName'],
+            'name': info['name'],
             'type': 'episode/sakura',
             'info': {
                 'id': info['id'],
                 'video': info['video']
             },
-            'title': info['name']
+            'title': info['title']
         }
 
     def set_info(self, info):
@@ -460,19 +460,14 @@ class Episode(object):
                         'SESSDATA': self.data['SESSDATA']
                     })
             elif self.data['type'] == 'episode/sakura':
-                try:
-                    download_sakura.download(
-                        self.data['info']['video'], self.download_path
-                    )
-                except Exception as e:
-                    self._print(e, level=logging.WARNING)
-                    video = download_sakura.get_video(self.data['info']['id'])
-                    self.data['info']['video'] = video
-                    download_sakura.download(video, self.download_path)
+                sakura_like.download(
+                    self.data['info']['video'], self.download_path
+                )
 
         except Exception as e:
             self._print(e, level=logging.ERROR)
             self.set_data('status', 'download_failed')
+            raise e
             return FAIL_MARK
         self.set_data('status', 'downloaded')
         create_mark(path.join(self.download_path, 'done'))
@@ -711,7 +706,10 @@ def _set_jump_url(results):
             i['biliUrl'] = 'https://www.bilibili.com/bangumi/play/ep%d?t=%.1f' % (
                 i['info']['epid'], i['time'])
         elif i['type'] == 'episode/sakura':
-            i['sakuraUrl'] = 'http://www.yhdm.so/v/%s.html' % i['info']['id']
+            ssid, ep_num = i['info']['id'].split('-')
+            i['sakuraUrl'] = 'https://animepure.netlify.app/bangumi/%s/%s?t=%.1f' % (
+                ssid, ep_num, i['time']
+            )
     return results
 
 
@@ -749,7 +747,7 @@ def get_status():
         preset['seasonIds'] = []
         for season_id in seasons:
             season = seasons[season_id]
-            if preset_name in season['finishedPresets']:
+            if preset_name in season['targetPresets']:
                 preset['seasonIds'].append(season_id)
         preset['seasonIds'].sort(key=sort_key)
     return {
