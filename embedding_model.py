@@ -42,5 +42,5 @@ class EmbeddingModel:
         feats = []
         for i in range(num):
             imgs[i] = self.preprocess_image(img_paths[i])
-        feats = [i.numpy().tolist() for i in self.model(self.preprocess_input(imgs))]
+        feats = [i for i in self.model(self.preprocess_input(imgs))]
         return feats

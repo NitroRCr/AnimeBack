@@ -2,6 +2,7 @@ import json
 from os import path
 import os
 from ldb import LDB
+import bilibili_api
 from bilibili_api import bangumi
 from download_bilibili import download_bilibili_video
 import sakura_like
@@ -224,13 +225,17 @@ class Season:
     def load_episodes(self, start=None, end=None, onstart=None):
         if self.data['type'] == 'season/bilibili':
             season_id = self.data['info']['ssId']
-            info = bangumi.get_collective_info(season_id=season_id)
+            try:
+                info = bangumi.get_collective_info(season_id=season_id)
+            except bilibili_api.exceptions.BilibiliException as e:
+                self._print('load episodes failed: ' + str(e), logging.ERROR)
+                return FAIL_MARK
+            return DONE_MARK
             episodes = info['episodes'][start:end]
             onstart and onstart()
             for i in episodes:
                 self.episodes.append(
                     Episode(bili_epid=i['id'], settings=self.settings, season_id=self.id))
-            return DONE_MARK
         elif self.data['type'] == 'season/sakura':
             season_id = self.data['info']['ssId']
             info = sakura_like.get_season_info(season_id)
@@ -467,7 +472,6 @@ class Episode(object):
         except Exception as e:
             self._print(e, level=logging.ERROR)
             self.set_data('status', 'download_failed')
-            raise e
             return FAIL_MARK
         self.set_data('status', 'downloaded')
         create_mark(path.join(self.download_path, 'done'))
@@ -707,7 +711,7 @@ def _set_jump_url(results):
                 i['info']['epid'], i['time'])
         elif i['type'] == 'episode/sakura':
             ssid, ep_num = i['info']['id'].split('-')
-            i['sakuraUrl'] = 'https://animepure.netlify.app/bangumi/%s/%s?t=%.1f' % (
+            i['sakuraUrl'] = 'https://animepure.netlify.app/bangumi/%s?epNum=%s&t=%.1f' % (
                 ssid, ep_num, i['time']
             )
     return results

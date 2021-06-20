@@ -14,7 +14,8 @@ from common import (
     db_status,
     SKIP_MARK,
     DONE_MARK,
-    HAS_ERR_MARK
+    HAS_ERR_MARK,
+    FAIL_MARK
 )
 
 config = get_json('config.json')
@@ -85,7 +86,8 @@ def download_bilibili():
         else:
             end = int(end)
         season = Season(bili_ssid=bili_ssid, settings=settings)
-        season.load_episodes(start, end)
+        if season.load_episodes(start, end) == FAIL_MARK:
+            continue
         if override:
             season.update_settings(settings)
         need_process = season.need_process()
