@@ -71,6 +71,7 @@ def download_bilibili():
         settings = {
             'SESSDATA': s['SESSDATA'] if 'SESSDATA' in s else default['SESSDATA'],
             'quality': s['quality'] if 'quality' in s else default['quality'],
+            'audioQuality': s['audioQuality'] if 'audioQuality' in s else default['audioQuality'],
             'presets': s['presets'] if 'presets' in s else default['presets'],
             'tag': s['tag'] if 'tag' in s else default['tag'],
         }

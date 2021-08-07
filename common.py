@@ -4,7 +4,7 @@ import os
 from ldb import LDB
 import bilibili_api
 from bilibili_api import bangumi
-from download_bilibili import download_bilibili_video
+import download_bilili
 import sakura_like
 import re
 import subprocess
@@ -346,6 +346,7 @@ class Episode(object):
             if bili_epid:
                 self.data = self.get_data_from_bili(bili_epid)
                 self.data['quality'] = settings['quality']
+                self.data['audioQuality'] = settings['audioQuality']
                 self.data['SESSDATA'] = settings['SESSDATA']
                 set_refer('episode/bilibili', bili_epid, self.id)
             elif sakura_id:
@@ -391,7 +392,8 @@ class Episode(object):
             'info': {
                 'bvid': info['epInfo']['bvid'],
                 'epid': epid,
-                'cid': info['epInfo']['cid']
+                'cid': info['epInfo']['cid'],
+                'i': info['epInfo']['i']
             },
             'hasNext': info['epInfo']['hasNext'],
             'title': info['epInfo']['title']
@@ -459,10 +461,13 @@ class Episode(object):
         onstart and onstart()
         try:
             if self.data['type'] == 'episode/bilibili':
-                download_bilibili_video(
-                    self.data['info']['epid'], self.download_path, {
+                url = 'https://www.bilibili.com/bangumi/play/ep%d' % self.data['info']['epid']
+                download_bilili.download(
+                    url, self.download_path, {
                         'quality': self.data['quality'],
-                        'SESSDATA': self.data['SESSDATA']
+                        'audioQuality': self.data['audioQuality'],
+                        'SESSDATA': self.data['SESSDATA'],
+                        'i': self.data['info']['i']
                     })
             elif self.data['type'] == 'episode/sakura':
                 sakura_like.download(
@@ -500,9 +505,9 @@ class Episode(object):
         if path.exists(out_video):
             os.remove(out_video)
         if FFMPEG_CUDA:
-            subprocess.run("ffmpeg -hwaccel cuvid -c:v h264_cuvid -i %s -acodec aac -b:a 64k -ar 44100 -c:v h264_nvenc -cq %d -y %s -vf scale=-2:%d -hide_banner"
+            subprocess.run("ffmpeg -hwaccel cuvid -c:v h264_cuvid -i %s -c:v h264_nvenc -cq %d -y %s -vf scale=-2:%d -hide_banner"
                        % (video, PROC_CONF['crf'], out_video, PROC_CONF['resolution']), check=True, shell=True)
-        subprocess.run("ffmpeg -i %s -vcodec libx264 -acodec aac -b:a 64k -ar 44100 -crf %d -tune animation -vf scale=-2:%d %s -y -hide_banner"
+        subprocess.run("ffmpeg -i %s -vcodec libx264 -crf %d -tune animation -vf scale=-2:%d %s -y -hide_banner"
                        % (video, PROC_CONF['crf'], PROC_CONF['resolution'], out_video), check=True, shell=True)  # 压缩视频
         create_mark(path.join(self.video_out_path, 'done'))
         self._print('compressed')
@@ -608,6 +613,12 @@ class Episode(object):
             self.data['tag'] = settings['tag']
         if 'presets' in settings:
             self.data['targetPresets'] = settings['presets']
+        if 'SESSDATA' in settings:
+            self.data['SESSDATA'] = settings['SESSDATA']
+        if 'quality' in settings:
+            self.data['quality'] = settings['quality']
+        if 'audioQuality' in settings:
+            self.data['audioQuality'] = settings['audioQuality']
         self.write_data()
 
 

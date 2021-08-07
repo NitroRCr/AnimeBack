@@ -19,6 +19,7 @@ CONF_TEMPLATES = {
             "default": {
                 "SESSDATA": "",
                 "quality": 64,
+                "audioQuality": 30216,
                 "presets": [
                     "ResNetFlat",
                     "ResNetFeat"

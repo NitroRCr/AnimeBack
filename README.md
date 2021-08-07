@@ -86,7 +86,7 @@ gunicorn -w 4 -b 127.0.0.1:4000 app:flask_app
 ## Thanks · 鸣谢
 
 - 部分过程参考[以图搜番](https://gitee.com/tuxiaobei/find_video_by_pic#https://github.com/Henryhaohao/Bilibili_video_download)。部分思路来自[tuxiaobei](https://gitee.com/tuxiaobei)
-- 从B站下载的部分参考[Bilibili_video_download](https://github.com/Henryhaohao/Bilibili_video_download)
+- 从B站下载的部分使用了[bilili](https://github.com/SigureMo/bilili)
 - 自动裁剪图像黑边的实现，来源于[trace.moe](https://github.com/soruly/trace.moe)的`crop.py`
 - 使用了[Milvus](https://milvus.io)索引和搜索向量
 - 使用了各深度学习模型提取图像特征
