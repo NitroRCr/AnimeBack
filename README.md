@@ -23,7 +23,7 @@
 安装依赖项：
 
 ```bash
-pip install bilibili_api imagehash tensorflow keras flask pymilvus opencv-python sklearn
+pip install bilibili_api imagehash tensorflow keras flask pymilvus opencv-python sklearn bilili
 # Linux
 pip install plyvel
 # Windows
