@@ -230,12 +230,12 @@ class Season:
             except bilibili_api.exceptions.BilibiliException as e:
                 self._print('load episodes failed: ' + str(e), logging.ERROR)
                 return FAIL_MARK
-            return DONE_MARK
             episodes = info['episodes'][start:end]
             onstart and onstart()
             for i in episodes:
                 self.episodes.append(
                     Episode(bili_epid=i['id'], settings=self.settings, season_id=self.id))
+            return DONE_MARK
         elif self.data['type'] == 'season/sakura':
             season_id = self.data['info']['ssId']
             info = sakura_like.get_season_info(season_id)
